@@ -1,0 +1,26 @@
+{
+  "name": "riothing",
+  "version": "0.0.1",
+  "description": "riot & node tag compiling, rendering and routing functions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node -e \"require('./riothing').render('../public').then(console.log)\"",
+    "min": "uglifyjs riothing.js > riothing.min.js"
+  },
+  "keywords": [
+    "html5",
+    "poinout",
+    "riot",
+    "node"
+  ],
+  "author": "noneedsystem",
+  "license": "MIT",
+  "dependencies": {
+    "riot": "^3.7.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noneedsystem/riothing.git"
+  }
+}
