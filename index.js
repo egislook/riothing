@@ -1,14 +1,13 @@
 'use strict';
 
-const publicPath = __dirname + '/public';
-
 const fs        = require('fs');
 const riot      = require('riot');
 const Module    = require('module');
 const path      = require('path');
 
-let Riothing  = clientRequire('./riothing.js');
-const content = require(publicPath + '/content.json');
+const publicPath  = path.resolve(__dirname + '/../../public');
+let Riothing      = clientRequire(__dirname + '/riothing.js');
+const content     = require(path.resolve(publicPath + '/content.json'));
 
 let riothing  = new Riothing();
 
@@ -28,7 +27,7 @@ exports.route         = route;
 exports.reinit        = reinit;
 
 function reinit(req, res){
-  Riothing  = clientRequire(publicPath + '/lib/riothing.js');
+  Riothing  = clientRequire(__dirname + '/riothing.js');
   riothing  = new Riothing();
   init(publicPath, ROOT).then(() => route(req, res))
 }
