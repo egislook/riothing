@@ -5,7 +5,7 @@ const riot      = require('riot');
 const Module    = require('module');
 const path      = require('path');
 
-const publicPath  = path.resolve(__dirname + '/../../public');
+const publicPath  = path.resolve(__dirname + '/../public');
 let Riothing      = clientRequire(__dirname + '/riothing.js');
 const content     = require(path.resolve(publicPath + '/content.json'));
 
