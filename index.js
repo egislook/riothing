@@ -5,11 +5,7 @@ const riot      = require('riot');
 const Module    = require('module');
 const path      = require('path');
 
-const publicPath  = path.resolve(__dirname + '/../../functions/public');
-let Riothing      = clientRequire(__dirname + '/riothing.js');
-const content     = require(path.resolve(publicPath + '/content.json'));
-
-let riothing  = new Riothing();
+let riothing, Riothing, publicPath, content;
 
 const ROOT    = {
   VIEWS:  [],
@@ -17,14 +13,22 @@ const ROOT    = {
   CLIENT: '',
 };
 
-init(publicPath, ROOT);
-
 exports.renderHTML    = renderHTML;
 exports.clientRequire = clientRequire;
 exports.initViews     = initViews;
 exports.compileRiot   = compileRiot;
 exports.route         = route;
 exports.reinit        = reinit;
+exports.config        = config;
+
+function config(pubPath){
+  publicPath    = path.resolve(pubPath);
+  Riothing      = clientRequire(__dirname + '/riothing.js');
+  riothing      = new Riothing();
+  content       = require(path.resolve(publicPath + '/content.json'));
+  
+  init(publicPath, ROOT);
+}
 
 function reinit(req, res){
   Riothing  = clientRequire(__dirname + '/riothing.js');
