@@ -2,7 +2,7 @@
 Simple to use Library for riot isomorphic or client only app creation process.
 
 #### Riothing client
-https://cdn.rawgit.com/noneedsystem/riothing/0.0.1/riothing.js
+https://cdn.rawgit.com/noneedsystem/riothing/0.0.6/riothing.js
 
 #### Riothing server
 `npm install -S riothing`
@@ -89,7 +89,7 @@ function storeRoutes(initState){
     }
   }
   
-  function RoutesState(data = {}, prev = {}){
+  function RoutesState(data = {}, prev = {}, act){
     this.routes = data.routes && data.routes.map((route) => new Route(route)) || prev.routes ||
     [
       new Route({ name: 'main', main: true }),

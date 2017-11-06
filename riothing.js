@@ -112,7 +112,7 @@ function Riothing(data){
     
     // Main methods
     this.set = (object = {}) => {
-      const newState = this.model ? new this.model(object, this.state) : object;
+      const newState = this.model ? new this.model(object, this.state, this.act) : object;
       this.state = newState;
       this.trigger('SET', newState);
       return newState;
