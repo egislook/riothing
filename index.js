@@ -38,9 +38,8 @@ function reinit(req, res){
 
 function route(req, res){
   const page    = req.originalUrl.split('/').pop();
-  const splash  = req.query.splash;
   
-  riothing.act('SET_ROUTE', page, splash);
+  riothing.act('SET_ROUTE', page, req.query);
   
   res.send(renderHTML(ROOT));
 }

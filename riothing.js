@@ -9,7 +9,7 @@ function Riothing(data){
   this.stores = {};
   this.models = {};
   
-  this.act = (actionName, payload, cb) => {
+  this.action = (actionName) => {
     let action;
     this.storeNames.some((storeName) => {
       action = this.stores[storeName].actions[actionName];
@@ -17,10 +17,11 @@ function Riothing(data){
         return true;
     });
     if(!action) 
-      return console.warn(`Action "${actionName}" can not be found params "${payload}"`);
-    
-    return action(payload, cb);
+      return console.warn(`Action "${actionName}" can not be found`);
+    return action;
   }
+  
+  this.act = (actionName, payload, cb) => this.action(actionName)(payload, cb);
   
   //this.on('*', this.act);
   
@@ -49,7 +50,7 @@ function Riothing(data){
     stores.length &&
       stores.forEach((store) => this.setStore(parent[store](state)));
     // init route action
-    route((page) => this.act('SET_ROUTE', page, route.query().splash));
+    route((page) => this.act('SET_ROUTE', page, route.query()));
     route.base('/');
     route.start(1);
     // init app
@@ -90,6 +91,7 @@ function Riothing(data){
         this.act      = riothing.act.bind(riothing);
         this.track    = riothing.on.bind(riothing);
         this.store    = riothing.getStore.bind(riothing);
+        this.action   = riothing.action.bind(riothing);
         this.models   = riothing.models;
         this.stores   = riothing.stores;
       }
