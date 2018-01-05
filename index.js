@@ -38,7 +38,7 @@ function config(cfg){
   riothing      = new Riothing();
   content       = CFG.content && !content && require(path.resolve(CFG.pub + CFG.content));
   
-  return init(CFG, ROOT);
+  return init(CFG.pub, ROOT);
 }
 
 function reinit(req, res){
@@ -54,33 +54,52 @@ function route(req, res){
   res.send(renderHTML(ROOT));
 }
 
-function init({ pub, storeDir, appDir, root }){
-  if(storeDir && !fs.existsSync(pub + storeDir))
-    console.log(`WARNING: "store" dir does not exist in ${pub}`);
-  else   
-    initStores(pub + storeDir).then((stores) => {
-      
-      Promise.all(stores.map( (store) => riothing.setStore(store.fn(Object.assign({}, content))) ))
-        .then( (strs) => strs.map( store => store.init(content) ) )
-      
-      root.STORES = stores.map((store) => ({ 
-        name: store.name,
-        path: store.path.replace(pub, '.')
-      }));
-    });
+function init(pubPath, root){
+  initStores(pubPath + '/store').then((stores) => {
+    
+    Promise.all(stores.map( (store) => riothing.setStore(store.fn(Object.assign({}, content))) ))
+      .then( (strs) => strs.map( store => store.init(content) ) )
+    
+    root.STORES = stores.map((store) => ({ 
+      name: store.name,
+      path: store.path.replace(pubPath, '.')
+    }));
+  });
   
-  if(!fs.existsSync(pub + root))
-    return console.log(`WARNING: "root" file does not exist in ${pub}`)
-  else
-    compileRiot(pub + root);
-  
-  if(!fs.existsSync(pub + appDir))
-    console.log(`WARNING: "app" dir does not exist in ${pub}`);
-  else
-    return initViews(pub + appDir).then((views) => {
-      root.VIEWS = views.paths.map((path) => path.replace(pub, '.'));
-    });
+  return initViews(pubPath + '/app').then((views) => {
+    compileRiot(pubPath + '/root.html');
+    root.VIEWS = views.paths.map((path) => path.replace(pubPath, '.'));
+  });
 }
+
+// function init({ pub, storeDir, appDir, root }){
+//   if(storeDir && !fs.existsSync(pub + storeDir))
+//     console.log(`WARNING: "store" dir does not exist in ${pub}`);
+//   else{   
+//     initStores(pub + storeDir).then((stores) => {
+      
+//       Promise.all(stores.map( (store) => riothing.setStore(store.fn(Object.assign({}, content))) ))
+//         .then( (strs) => strs.map( store => store.init(content) ) )
+      
+//       root.STORES = stores.map((store) => ({ 
+//         name: store.name,
+//         path: store.path.replace(pub, '.')
+//       }));
+//     });
+//   }
+  
+//   if(!fs.existsSync(pub + root))
+//     return console.log(`WARNING: "root" file does not exist in ${pub}`)
+//   else
+//     compileRiot(pub + root);
+  
+//   if(!fs.existsSync(pub + appDir))
+//     console.log(`WARNING: "app" dir does not exist in ${pub}`);
+//   else
+//     return initViews(pub + appDir).then((views) => {
+//       root.VIEWS = views.paths.map((path) => path.replace(pub, '.'));
+//     });
+// }
 
 function initStores(dir = './public/store'){
   return readDir(path.resolve(dir)).then((files) => 
@@ -127,7 +146,6 @@ function compileRiot(filePath){
 
 function clientRequire(filePath, code, include){
   filePath = path.resolve(filePath);
-  console.log(filePath);
   include = include || [`var riot = require('riot');`];
   code = code || fs.readFileSync(filePath, 'utf8');
   let paths = Module._nodeModulePaths(__dirname);
