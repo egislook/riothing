@@ -132,7 +132,7 @@ function initViews(dir, skipViewFiles){
 function renderHTML(opts, tagName = 'html'){
   opts = opts || ROOT;
   let stores = opts.STORES && opts.STORES.slice().map(store => store.name) || [];
-  let client = `new Riothing({ stores: ${JSON.stringify(stores)}, state: '${CFG.content}' });`;
+  let client = `new Riothing({ stores: ${JSON.stringify(stores)}, state: '/content.json' });`;
   opts.CLIENT = 'data:text/javascript;base64,' + Buffer(client).toString('base64');
   return  `
     <!DOCTYPE html> 
