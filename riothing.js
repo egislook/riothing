@@ -12,6 +12,7 @@ function Riothing(data){
   this.action = (actionName) => {
     let action;
     this.storeNames.some((storeName) => {
+      //console.log(this.stores, storeName, this.storeNames);
       action = this.stores[storeName].actions[actionName];
       if(action) 
         return true;
@@ -37,6 +38,7 @@ function Riothing(data){
     this.models = Object.assign(this.models, models);
     this.storeNames.push(store);
     this.stores[store] = new riothingStore(state, actions, model);
+    return this.stores[store];
   }
   
   this.getStore = function(storeName){
@@ -45,12 +47,26 @@ function Riothing(data){
   
   this.store = this.getStore;
   
+  this.restate = (stores) => {
+    const storeNames = stores && stores.length && typeof stores[0] === 'string' && stores 
+      || this.storeNames.slice();
+      
+    return Promise.all(storeNames.map( storeName => {
+      const state = this.store(storeName).init();
+      return state;
+      
+    }) )
+  }
+  
+  this.setStores = (stores, state) => {
+    return stores.length && Promise.all(stores.map( (store) => this.setStore(parent[store](state)) ))
+      .then(this.restate);
+  }
+  
   //Initiation
   this.initClient = (stores, state) => {
-    stores.length &&
-      stores.forEach((store) => this.setStore(parent[store](state)));
-    // init route action
-    route((page) => this.act('SET_ROUTE', page, route.query()));
+    //init route action
+    route(page => this.act('SET_ROUTE', { page, query: route.query() }));
     route.base('/');
     route.start(1);
     // init app
@@ -67,9 +83,20 @@ function Riothing(data){
       return this.initClient(stores);
     
     if(typeof state === 'string' && !SERVER)
-      fetch(state)
-        .then(res => res.json())
-        .then(state => this.initClient(stores, state));
+      fetch(state).then((res) => res.json().then(
+        (json) => this.setStores(stores, json)
+      ).then(
+        () => this.initClient()
+      ));
+    
+      // fetch(state)
+      //   .then(res => res.json())
+      //   .then(json => {
+      //     console.log('SERVER_STATE', json);
+      //     return json;
+      //   })
+      //   .then(json => this.setStores(stores, json))
+      //   .then(() => this.initClient());
   }
     
   this.init = () => {
@@ -109,25 +136,36 @@ function Riothing(data){
     
     // Parent Actions
     this.act      = self.act;
+    this.action   = self.action;
     this.trigger  = self.trigger;
     this.track    = this.on;
+    this.restate  = self.restate;
     
     // Main methods
     this.set = (object = {}) => {
-      const newState = this.model ? new this.model(object, this.state, this.act) : object;
+      const newState = this.model ? new this.model(object, this.state, this.defaults, this.act) : object;
       this.state = newState;
       this.trigger('SET', newState);
-      return newState;
+      return translateState(this.state, this.action('GET_DEF'));
     }
     
     this.get = (key) => key 
-      ? key.split('.').reduce((o,i) => o[i], this.state) 
-      : this.state;
-    
+      ? key.split('.').reduce((o, i) => o[i], translateState(this.state, this.action('GET_DEF'))) 
+      : translateState(this.state, this.action('GET_DEF'));
     
     // Initiation
     _setActions.bind(this)(actions);
-    this.set(initState);
+    //_setModel.bind(this)(model);
+    
+    function _setModel(model){
+      if(!model)
+        return;
+      this.model = model;
+      this.model.prototype.def = (value) => this.act('GET_DEF', value);
+      //this.model.prototype.def = this.action('GET_DEF');
+      //console.log(this.action('GET_DEF'));
+      //this.model.def = this.action('GET_DEF');
+    }
       
     function _setActions(actions){
       this.actionNames = Object.keys(actions);
@@ -135,6 +173,35 @@ function Riothing(data){
       this.actionNames.some((actionName) => {
         this.actions[actionName] = actions[actionName].bind(this);
       });
+    }
+    
+    this.init = (content) => {
+      //console.log('THIS IS DEFAULT INIT STATE', content || initState);
+      //console.log('initState', initState);
+      let state = this.set(JSON.parse(JSON.stringify(content || initState)));
+      //translateState(state, this.action('GET_DEF'));
+      return state;
+    };
+    
+    function translateState(state, getDef){
+      
+      //let translatables = [];
+      
+      return collectTranslatables(JSON.parse(JSON.stringify(state)));
+      
+      function collectTranslatables(obj, path = []){
+        let key, val, newPath;
+        for(key in obj){
+          val = obj[key]; newPath = path.concat([key]);
+          if(typeof val === 'object')
+            collectTranslatables(val, newPath);
+          else if(typeof val === 'string' && val.indexOf('$') === 0){
+            //translatables.push({ path: newPath.join('.'), val, def: getDef(val) });
+            obj[key] = getDef(val);
+          }
+        }
+        return obj;
+      }
     }
   }
   

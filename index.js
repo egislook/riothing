@@ -4,6 +4,7 @@ const fs        = require('fs');
 const riot      = require('riot');
 const Module    = require('module');
 const path      = require('path');
+const cookie    = require('cookie');
 
 let riothing, Riothing, publicPath, content;
 
@@ -22,32 +23,32 @@ exports.reinit        = reinit;
 exports.config        = config;
 
 function config(pubPath){
-  publicPath    = path.resolve(pubPath);
-  Riothing      = clientRequire(__dirname + '/riothing.js');
+  publicPath    = pubPath && path.resolve(pubPath) || publicPath;
+  Riothing      = clientRequire(publicPath + '/lib/riothing.js');
   riothing      = new Riothing();
-  content       = require(path.resolve(publicPath + '/content.json'));
+  content       = !content && require(path.resolve(publicPath + '/content.json'));
   
-  init(publicPath, ROOT);
+  return init(publicPath, ROOT);
 }
 
 function reinit(req, res){
-  Riothing  = clientRequire(__dirname + '/riothing.js');
-  riothing  = new Riothing();
-  init(publicPath, ROOT).then(() => route(req, res))
+  config().then(() => route(req, res));
 }
 
 function route(req, res){
-  const page    = req.originalUrl.split('/').pop();
-  
-  riothing.act('SET_ROUTE', page, req.query);
+  const page = req.originalUrl.split('/').pop();
+  const query = req.query;
+  const cookies = cookie.parse(req.headers.cookie);
+  riothing.act('SET_ROUTE', { page, query, cookies });
   
   res.send(renderHTML(ROOT));
 }
 
 function init(pubPath, root){
   initStores(pubPath + '/store').then((stores) => {
-  
-    stores.forEach( (store) => riothing.setStore(store.fn(content)) );
+    
+    Promise.all(stores.map( (store) => riothing.setStore(store.fn(Object.assign({}, content))) ))
+      .then( (strs) => strs.map( store => store.init(content) ) )
     
     root.STORES = stores.map((store) => ({ 
       name: store.name,
