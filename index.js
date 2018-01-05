@@ -16,7 +16,7 @@ const ROOT  = {
 
 let CFG = {
   pub:      './../public/',
-  client:   './riothing.js',
+  client:   '/riothing.js',
   content:  '/content.json',
   storeDir: '/store',
   appDir:   '/app',
@@ -34,7 +34,7 @@ exports.config        = config;
 function config(cfg){
   Object.assign(CFG, cfg);
   CFG.pubPath   = path.resolve(CFG.pub);
-  Riothing      = clientRequire(CFG.client);
+  Riothing      = clientRequire(__dirname + CFG.client);
   riothing      = new Riothing();
   content       = CFG.content && !content && require(path.resolve(CFG.pub + CFG.content));
   
@@ -127,6 +127,7 @@ function compileRiot(filePath){
 
 function clientRequire(filePath, code, include){
   filePath = path.resolve(filePath);
+  console.log(filePath);
   include = include || [`var riot = require('riot');`];
   code = code || fs.readFileSync(filePath, 'utf8');
   let paths = Module._nodeModulePaths(__dirname);
