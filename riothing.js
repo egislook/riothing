@@ -146,7 +146,8 @@ function Riothing(data){
       const newState = this.model ? new this.model(object, this.state, this.defaults, this.act) : object;
       this.state = newState;
       this.trigger('SET', newState);
-      return translateState(this.state, this.action('GET_DEF'));
+      return this.state;
+      //return translateState(this.state, this.action('GET_DEF'));
     }
     
     this.get = (key) => key 
