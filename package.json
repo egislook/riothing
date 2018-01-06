@@ -17,7 +17,6 @@
   "author": "noneedsystem",
   "license": "MIT",
   "dependencies": {
-    "cookie": "^0.3.1",
     "riot": "^3.7.3"
   },
   "repository": {

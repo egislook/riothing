@@ -4,7 +4,7 @@ const fs        = require('fs');
 const riot      = require('riot');
 const Module    = require('module');
 const path      = require('path');
-const cookie    = require('cookie');
+//const cookie    = require('cookie');
 
 let riothing, Riothing, content;
 
