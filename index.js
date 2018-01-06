@@ -48,8 +48,8 @@ function reinit(req, res){
 function route(req, res){
   const page = req.originalUrl.split('/').pop();
   const query = req.query;
-  const cookies = cookie.parse(req.headers.cookie);
-  riothing.act('SET_ROUTE', { page, query, cookies });
+  //const cookies = cookie.parse(req.headers.cookie);
+  riothing.act('SET_ROUTE', { page, query, extras: req.originalUrl.split('/') /*cookies*/ });
   
   res.send(renderHTML(ROOT));
 }
