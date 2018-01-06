@@ -2,7 +2,7 @@
 Simple to use Library for riot isomorphic or client only app creation process.
 
 #### Riothing client
-https://cdn.rawgit.com/noneedsystem/riothing/v0.0.13/riothing.js
+https://cdn.rawgit.com/noneedsystem/riothing/v0.0.14/riothing.js
 
 #### Riothing server
 `npm install -S riothing`
