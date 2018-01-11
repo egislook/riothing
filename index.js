@@ -6,7 +6,6 @@ const Module    = require('module');
 const path      = require('path');
 //const cookie    = require('cookie');
 
-console.log('new riothing');
 
 let riothing, Riothing, content;
 
@@ -139,7 +138,7 @@ function renderHTML(opts, tagName = 'html'){
   opts = opts || ROOT;
   let stores = opts.STORES && opts.STORES.slice().map(store => store.name) || [];
   let client = fs.readFileSync(__dirname + CFG.client, 'utf8');
-  opts.CLIENT = toBase64(`${client};new Riothing({ stores: ${JSON.stringify(stores)}, state: '/content.json' });`);
+  opts.CLIENT = toBase64(`new Riothing({ stores: ${JSON.stringify(stores)}, state: '/content.json' });`);
   return  `
     <!DOCTYPE html>
     ${riot.render(tagName, opts)}
