@@ -65,7 +65,7 @@ function init(pubPath, root){
 
     root.STORES = stores.map((store) => ({
       name: store.name,
-      path: store.path.replace(pubPath, '.')
+      path: '.' + store.path.slice(pubPath.length)
     }));
   });
 
