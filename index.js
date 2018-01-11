@@ -6,6 +6,8 @@ const Module    = require('module');
 const path      = require('path');
 //const cookie    = require('cookie');
 
+console.log('new riothing');
+
 let riothing, Riothing, content;
 
 const ROOT  = {
@@ -37,7 +39,7 @@ function config(cfg){
   Riothing      = clientRequire(__dirname + CFG.client);
   riothing      = new Riothing();
   content       = CFG.content && !content && require(path.resolve(CFG.pub + CFG.content));
-  
+
   return init(CFG.pub, ROOT);
 }
 
@@ -50,22 +52,22 @@ function route(req, res){
   const query = req.query;
   //const cookies = cookie.parse(req.headers.cookie);
   riothing.act('SET_ROUTE', { page, query, extras: req.originalUrl.split('/') /*cookies*/ });
-  
+
   res.send(renderHTML(ROOT));
 }
 
 function init(pubPath, root){
   initStores(pubPath + '/store').then((stores) => {
-    
+
     Promise.all(stores.map( (store) => riothing.setStore(store.fn(Object.assign({}, content))) ))
       .then( (strs) => strs.map( store => store.init(content) ) )
-    
-    root.STORES = stores.map((store) => ({ 
+
+    root.STORES = stores.map((store) => ({
       name: store.name,
       path: store.path.replace(pubPath, '.')
     }));
   });
-  
+
   return initViews(pubPath + '/app').then((views) => {
     compileRiot(pubPath + '/root.html');
     root.VIEWS = views.paths.map((path) => path.replace(pubPath, '.'));
@@ -75,24 +77,24 @@ function init(pubPath, root){
 // function init({ pub, storeDir, appDir, root }){
 //   if(storeDir && !fs.existsSync(pub + storeDir))
 //     console.log(`WARNING: "store" dir does not exist in ${pub}`);
-//   else{   
+//   else{
 //     initStores(pub + storeDir).then((stores) => {
-      
+
 //       Promise.all(stores.map( (store) => riothing.setStore(store.fn(Object.assign({}, content))) ))
 //         .then( (strs) => strs.map( store => store.init(content) ) )
-      
-//       root.STORES = stores.map((store) => ({ 
+
+//       root.STORES = stores.map((store) => ({
 //         name: store.name,
 //         path: store.path.replace(pub, '.')
 //       }));
 //     });
 //   }
-  
+
 //   if(!fs.existsSync(pub + root))
 //     return console.log(`WARNING: "root" file does not exist in ${pub}`)
 //   else
 //     compileRiot(pub + root);
-  
+
 //   if(!fs.existsSync(pub + appDir))
 //     console.log(`WARNING: "app" dir does not exist in ${pub}`);
 //   else
@@ -102,12 +104,12 @@ function init(pubPath, root){
 // }
 
 function initStores(dir = './public/store'){
-  return readDir(path.resolve(dir)).then((files) => 
+  return readDir(path.resolve(dir)).then((files) =>
     files.map((filename) => {
       let _filePath = `${path.resolve(dir)}/${filename}`;
       let fn = clientRequire(_filePath);
-      return { 
-        path: _filePath, 
+      return {
+        path: _filePath,
         filename,
         fn,
         name: fn.name,
@@ -118,24 +120,28 @@ function initStores(dir = './public/store'){
 
 function initViews(dir, skipViewFiles){
   const viewPaths = [];
-  
+
   return collectViews(dir, viewPaths).then(() => {
     return Promise
       .all(viewPaths.slice(0).map(compileRiot))
-      .then((viewNames) => ({ 
-        paths: viewPaths, 
-        names: viewNames 
+      .then((viewNames) => ({
+        paths: viewPaths,
+        names: viewNames
       }));
   });
+}
+
+function toBase64(str){
+  return 'data:text/javascript;base64,' + Buffer(str).toString('base64');
 }
 
 function renderHTML(opts, tagName = 'html'){
   opts = opts || ROOT;
   let stores = opts.STORES && opts.STORES.slice().map(store => store.name) || [];
-  let client = `new Riothing({ stores: ${JSON.stringify(stores)}, state: '/content.json' });`;
-  opts.CLIENT = 'data:text/javascript;base64,' + Buffer(client).toString('base64');
+  let client = fs.readFileSync(__dirname + CFG.client, 'utf8');
+  opts.CLIENT = toBase64(`${client};new Riothing({ stores: ${JSON.stringify(stores)}, state: '/content.json' });`);
   return  `
-    <!DOCTYPE html> 
+    <!DOCTYPE html>
     ${riot.render(tagName, opts)}
   `;
 }
@@ -168,7 +174,7 @@ function readDir(dir){
 
 function collectViews(dir, views){
   return new Promise((resolve, reject) => {
-    readDir(dir).then((files) => 
+    readDir(dir).then((files) =>
       Promise.all(files.map((filename) => storeFilePath(filename, dir, views)))
     ).then(resolve).catch(reject);
   });
@@ -181,12 +187,12 @@ function validateView(filePath, extensions = ['html', 'tag']){
  function storeFilePath(filename, dir, views){
   let _filePath   = `${dir}/${filename}`;
   let _fileStats  = fs.lstatSync(_filePath);
-  
+
   if(!!_fileStats.isDirectory())
     return collectViews(_filePath, views);
-  
-   
+
+
   validateView(_filePath) && views.push(_filePath);
-  
+
   return _filePath;
 }
