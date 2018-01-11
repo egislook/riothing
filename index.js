@@ -13,6 +13,7 @@ const ROOT  = {
   VIEWS:  [],
   STORES: [],
   CLIENT: '',
+  PUB: '',
 };
 
 let CFG = {
@@ -35,6 +36,7 @@ exports.config        = config;
 function config(cfg){
   Object.assign(CFG, cfg);
   CFG.pubPath   = path.resolve(CFG.pub);
+  ROOT.PUB      = CFG.pubPath;
   Riothing      = clientRequire(__dirname + CFG.client);
   riothing      = new Riothing();
   content       = CFG.content && !content && require(path.resolve(CFG.pub + CFG.content));
