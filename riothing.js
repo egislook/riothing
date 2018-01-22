@@ -1,210 +1,143 @@
-function Riothing(data){
-  const self = this;
-  const SERVER = typeof module === 'object';
-  const cfg = data && data.cfg || { riotTag: 'tag-app' };
-  
+function Riothing(cfg){
+  const SERVER = this.SERVER = typeof module === 'object';
+
   riot.observable(this);
-  
-  this.storeNames = [];
-  this.stores = {};
-  this.models = {};
-  
-  this.action = (actionName) => {
-    let action;
-    this.storeNames.some((storeName) => {
-      //console.log(this.stores, storeName, this.storeNames);
-      action = this.stores[storeName].actions[actionName];
-      if(action) 
-        return true;
+
+  this.actions      = {};
+  this.actionNames  = [];
+  this.stores       = {};
+  this.storeNames   = [];
+
+  this.store  = (storeName)   => this.stores[storeName];
+  this.action = (actionName)  => this.actions[actionName];
+  this.act    = (actionName, payload, cb) => this.actions[actionName] && this.actions[actionName](payload, cb);
+
+  this.track = this.on;
+
+  init.bind(this)(cfg);
+
+  //console.log(this);
+
+  function init({ actions, stores }){
+    //init riothing mixin
+    riot.mixin('riothing', riothingMixin(this));
+    //init actions & stores
+    initActions.bind(this)(actions);
+    initStores.bind(this)(stores);
+  }
+
+  function initActions(actions){
+    actions.forEach(actionFileName => {
+      const actionFunction = SERVER
+        ? global[actionFileName]
+        : parent[actionFileName];
+
+      if(!actionFunction)
+        return console.warn(`"${actionFileName}" does not have function`);
+
+      let acts = actionFunction();
+
+      for(let actionName in acts){
+        this.actions[actionName] = acts[actionName].bind(this);
+        this.actionNames.push(actionName);
+      }
     });
-    if(!action) 
-      return console.warn(`Action "${actionName}" can not be found`);
-    return action;
   }
-  
-  this.act = (actionName, payload, cb) => this.action(actionName)(payload, cb);
-  
-  //this.on('*', this.act);
-  
-  this.setStore = (store, state, actions, models, model) => {
-    if(typeof store === 'object'){
-      state   = store.state   || state    || {};
-      actions = store.actions || actions  || {};
-      models  = store.models  || models   || {};
-      model   = store.model;
-      store   = store.name    || 'noname';
-    }
-    
-    this.models = Object.assign(this.models, models);
-    this.storeNames.push(store);
-    this.stores[store] = new riothingStore(state, actions, model);
-    return this.stores[store];
+
+  function initStores(stores){
+    stores.forEach(storeFileName => {
+      const storeFunction = SERVER
+        ? global[storeFileName]
+        : parent[storeFileName];
+
+      if(!storeFunction)
+        return console.warn(`"${storeFile}" does not have function`);
+
+      let store = storeFunction();
+
+      this.stores[store.name] = new riothingStore(store.name, store, this);
+      this.storeNames.push(store.name);
+    });
   }
-  
-  this.getStore = function(storeName){
-    return this.stores[storeName];
-  }
-  
-  this.store = this.getStore;
-  
-  this.restate = (stores) => {
-    const storeNames = stores && stores.length && typeof stores[0] === 'string' && stores 
-      || this.storeNames.slice();
-      
-    return Promise.all(storeNames.map( storeName => {
-      const state = this.store(storeName).init();
-      return state;
-      
-    }) )
-  }
-  
-  this.setStores = (stores, state) => {
-    return stores.length && Promise.all(stores.map( (store) => this.setStore(parent[store](state)) ))
-      .then(this.restate);
-  }
-  
-  //Initiation
-  this.initClient = (stores, state) => {
-    //init route action
-    route(page => this.act('SET_ROUTE', { page, query: route.query() }));
-    route.base('/');
-    route.start(1);
-    // init app
-    riot.mount(cfg.riotTag);
-  }
-  
-  this.initData = (data) => {
-    if(!data)
-      return;
-      
-    const { state, stores } = data;
-    
-    if(!state)
-      return this.initClient(stores);
-    
-    if(typeof state === 'string' && !SERVER)
-      fetch(state).then((res) => res.json().then(
-        (json) => this.setStores(stores, json)
-      ).then(
-        () => this.initClient()
-      ));
-    
-      // fetch(state)
-      //   .then(res => res.json())
-      //   .then(json => {
-      //     console.log('SERVER_STATE', json);
-      //     return json;
-      //   })
-      //   .then(json => this.setStores(stores, json))
-      //   .then(() => this.initClient());
-  }
-    
-  this.init = () => {
-    //init mixin
-    riot.mixin('riothing', mixin(this));
-    //init data
-    !SERVER && this.initData(data);
-  }
-  
-  function mixin(riothing){
-    console.log('Riothing Mixin', `
-      init: this.mixin(\'riothing\')
-      methods: ['act', 'track', 'store']
-      variables: ['models', 'stores']
-    `);
+
+  function riothingMixin(self){
+    console.log('init Mixin');
     return {
       init: function(){
-        this.SERVER   = SERVER;
-        this.act      = riothing.act.bind(riothing);
-        this.track    = riothing.on.bind(riothing);
-        this.store    = riothing.getStore.bind(riothing);
-        this.action   = riothing.action.bind(riothing);
-        this.models   = riothing.models;
-        this.stores   = riothing.stores;
+        this.store  = self.store;
+        this.action = self.action;
+        this.act    = self.act;
+        this.track  = self.track;
       }
     }
   }
-  
-  function riothingStore(initState = {}, actions = {}, model){
-    riot.observable(this);
-    // Variables
-    this.SERVER       = SERVER;
+
+  function riothingStore(name, { state, model, actions }, self){
+
+    this.name         = name;
     this.model        = model;
-    this.state;
+    this.state        = state || {};
     this.actions      = {};
     this.actionNames  = [];
-    
-    // Parent Actions
-    this.act      = self.act;
-    this.action   = self.action;
-    this.trigger  = self.trigger;
-    this.track    = this.on;
-    this.restate  = self.restate;
-    
-    // Main methods
-    this.set = (object = {}) => {
-      const newState = this.model ? new this.model(object, this.state, this.defaults, this.act) : object;
-      this.state = newState;
-      this.trigger('SET', newState);
+    this.trigger      = self.trigger;
+
+    initStore.bind(this)({ actions });
+
+    this.get = (key) => key
+      ? key.split('.').reduce((o,i) => o[i], this.state)
+      : this.state;
+
+    this.set = (data, triggerName) => {
+      Object.assign(this.state, model && new model(data) || data)
+      triggerName && self.trigger(triggerName, this.state);
       return this.state;
-      //return translateState(this.state, this.action('GET_DEF'));
     }
-    
-    this.get = (key) => key 
-      ? key.split('.').reduce((o, i) => o[i], translateState(this.state, this.action('GET_DEF'))) 
-      : translateState(this.state, this.action('GET_DEF'));
-    
-    // Initiation
-    _setActions.bind(this)(actions);
-    //_setModel.bind(this)(model);
-    
-    function _setModel(model){
-      if(!model)
-        return;
-      this.model = model;
-      this.model.prototype.def = (value) => this.act('GET_DEF', value);
-      //this.model.prototype.def = this.action('GET_DEF');
-      //console.log(this.action('GET_DEF'));
-      //this.model.def = this.action('GET_DEF');
+
+    this.restate = (data, triggerName) => {
+      this.state = model && new model(data) || data;
+      triggerName && self.trigger(triggerName, this.state);
+      return this.state;
     }
-      
-    function _setActions(actions){
-      this.actionNames = Object.keys(actions);
-      
-      this.actionNames.some((actionName) => {
+
+    this.act = (actionName, payload, cb) => this.actions[actionName] && this.actions[actionName](payload, cb);
+
+    function initStore({ actions }){
+      for(let actionName in actions){
         this.actions[actionName] = actions[actionName].bind(this);
-      });
-    }
-    
-    this.init = (content) => {
-      //console.log('THIS IS DEFAULT INIT STATE', content || initState);
-      //console.log('initState', initState);
-      let state = this.set(JSON.parse(JSON.stringify(content || initState)));
-      //translateState(state, this.action('GET_DEF'));
-      return state;
-    };
-    
-    function translateState(state, getDef){
-      
-      //let translatables = [];
-      
-      return collectTranslatables(JSON.parse(JSON.stringify(state)));
-      
-      function collectTranslatables(obj, path = []){
-        let key, val, newPath;
-        for(key in obj){
-          val = obj[key]; newPath = path.concat([key]);
-          if(typeof val === 'object')
-            collectTranslatables(val, newPath);
-          else if(typeof val === 'string' && val.indexOf('$') === 0){
-            //translatables.push({ path: newPath.join('.'), val, def: getDef(val) });
-            obj[key] = getDef(val);
-          }
-        }
-        return obj;
+        this.actionNames.push(actionName);
       }
     }
   }
-  
-  this.init();
+}
+
+const intervals = [
+  { label: 'year', seconds: 31536000 },
+  { label: 'month', seconds: 2592000 },
+  { label: 'day', seconds: 86400 },
+  { label: 'hour', seconds: 3600 },
+  { label: 'minute', seconds: 60 },
+  { label: 'second', seconds: 0 }
+];
+
+function timeSince(timestamp = 0){
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  const interval = intervals.find(i => i.seconds < seconds);
+  const count = Math.floor(seconds / interval.seconds);
+  return `${count} ${interval.label}${count !== 1 ? 's' : ''} ago`;
+}
+
+function extensionViewLoad(){
+  fetch(chrome.extension.getURL(viewFilePath))
+    .then(res   => res.text())
+    .then(html 	=> {
+
+      //Compile and mount tags
+      html = riot.compile(html, true);
+      eval(html);
+      riot.mount('*');
+
+      //Generate styling
+      fucss.glob = false;
+      return fucss.generateStyling({ riot: html, returnStyle: false })
+    })
 }

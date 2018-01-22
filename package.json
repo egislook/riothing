@@ -17,6 +17,7 @@
   "author": "noneedsystem",
   "license": "MIT",
   "dependencies": {
+    "node-fetch": "^1.7.3",
     "riot": "^3.7.3"
   },
   "repository": {
