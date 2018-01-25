@@ -68,6 +68,7 @@ function Riothing(cfg){
         this.action = self.action;
         this.act    = self.act;
         this.track  = self.track;
+        this.ago    = timeSince;
       }
     }
   }
