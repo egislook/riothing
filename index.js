@@ -19,6 +19,7 @@ function Setup(cfg){
   const CFG = {
     //NODE_ENV
     DEV: false,
+    VER: '0.0.1',
     // dirs
     PUB_DIR:     './../public/',
     STORE_DIR:   '/store',
@@ -56,7 +57,7 @@ function Setup(cfg){
   })
   .then(({ actions, stores }) => {
     Riothing = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
-    riothing = new Riothing({ actions, stores, DEV: CFG.DEV });
+    riothing = new Riothing({ actions, stores, DEV: CFG.DEV, VER: CFG.VER });
     riothing.act(CFG.INIT_ACTION_NAME, cfg);
     //console.log(utils.renderHTML(CLIENT));
     return riothing;
