@@ -17,6 +17,8 @@ let riothing, Riothing;
 
 function Setup(cfg){
   const CFG = {
+    //NODE_ENV
+    DEV: false,
     // dirs
     PUB_DIR:     './../public/',
     STORE_DIR:   '/store',
@@ -28,7 +30,7 @@ function Setup(cfg){
     ROOT_FILE:       '/root.html',
     // rest
     INCLUDE_CLIENT:     true,
-    INIT_ACTION_NAME:   'INIT_APP'
+    INIT_ACTION_NAME:   'INIT_APP',
   };
 
   Object.assign(CFG, cfg);
@@ -48,13 +50,13 @@ function Setup(cfg){
     };
   })
   .then(({ actions, stores }) => {
-    CLIENT.SCRIPT = utils.getScript(CFG.INCLUDE_CLIENT && CFG.CLIENT_FILE, { actions, stores }, CFG.INIT_ACTION_NAME);
+    CLIENT.SCRIPT = utils.getScript(CFG.INCLUDE_CLIENT && CFG.CLIENT_FILE, { actions, stores }, CFG.INIT_ACTION_NAME, cfg);
     utils.compileRiot(CFG.PUB_DIR + CFG.ROOT_FILE);
     return { actions, stores };
   })
   .then(({ actions, stores }) => {
     Riothing = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
-    riothing = new Riothing({ actions, stores });
+    riothing = new Riothing({ actions, stores, DEV: CFG.DEV });
     riothing.act(CFG.INIT_ACTION_NAME, cfg);
     //console.log(utils.renderHTML(CLIENT));
     return riothing;
@@ -64,7 +66,7 @@ function Setup(cfg){
 module.exports = Setup;
 
 module.exports.route = (req, res) => {
-  const page = req.originalUrl.split('/').pop();
+  const page  = req.originalUrl.split('/').pop();
   const query = req.query;
   //const cookies = cookie.parse(req.headers.cookie);
   //riothing.act('SET_ROUTE', { page, query, extras: req.originalUrl.split('/') /*cookies*/ });
@@ -125,13 +127,14 @@ utils.getFiles = (pub, dir, views) => {
 utils.toBase64 = (str) =>
   'data:text/javascript;base64,' + Buffer(str).toString('base64');
 
-utils.getScript = (clientPath, { actions, stores }, initActionName = 'INIT_APP') => {
+utils.getScript = (clientPath, { actions, stores }, initActionName = 'INIT_APP', { DEV }) => {
   let client = [];
   clientPath && client.push(fs.readFileSync(__dirname + clientPath, 'utf8'));
   client.push(`
     var riothing = new Riothing({
       stores:   ${JSON.stringify(stores)},
-      actions:  ${JSON.stringify(actions)}
+      actions:  ${JSON.stringify(actions)},
+      DEV:      ${DEV},
     });
     riothing.act('${initActionName}', {});
   `);
