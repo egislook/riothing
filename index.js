@@ -136,7 +136,7 @@ utils.getScript = (clientPath, { actions, stores }, initActionName = 'INIT_APP',
       stores:   ${JSON.stringify(stores)},
       actions:  ${JSON.stringify(actions)},
       DEV:      ${DEV},
-      VER:      ${VER}
+      VER:      '${VER}'
     });
     riothing.act('${initActionName}', {});
   `);
