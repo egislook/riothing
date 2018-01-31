@@ -127,7 +127,7 @@ utils.getFiles = (pub, dir, views) => {
 utils.toBase64 = (str) =>
   'data:text/javascript;base64,' + Buffer(str).toString('base64');
 
-utils.getScript = (clientPath, { actions, stores }, initActionName = 'INIT_APP', { DEV }) => {
+utils.getScript = (clientPath, { actions, stores }, initActionName = 'INIT_APP', { DEV, VER }) => {
   let client = [];
   clientPath && client.push(fs.readFileSync(__dirname + clientPath, 'utf8'));
   client.push(`
@@ -135,6 +135,7 @@ utils.getScript = (clientPath, { actions, stores }, initActionName = 'INIT_APP',
       stores:   ${JSON.stringify(stores)},
       actions:  ${JSON.stringify(actions)},
       DEV:      ${DEV},
+      VER:      ${VER}
     });
     riothing.act('${initActionName}', {});
   `);

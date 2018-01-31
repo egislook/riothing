@@ -1,6 +1,7 @@
 function Riothing(cfg){
   const SERVER = this.SERVER = typeof module === 'object';
   const DEV    = this.DEV    = cfg.DEV;
+  const DEV    = this.VER    = cfg.VER;
 
   riot.observable(this);
 
