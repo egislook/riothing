@@ -3,12 +3,16 @@ function Riothing(cfg){
   const DEV    = this.DEV    = cfg.DEV;
   const VER    = this.VER    = cfg.VER;
 
+  this.utils = new RiothingUtils();
+
   riot.observable(this);
 
-  this.actions      = {};
+  this.routes       = cfg.routes;
   this.actionNames  = [];
-  this.stores       = {};
   this.storeNames   = [];
+  this.actions      = {};
+  this.stores       = {};
+
 
   this.store  = (storeName)   => this.stores[storeName];
   this.action = (actionName)  => this.actions[actionName];
@@ -70,7 +74,9 @@ function Riothing(cfg){
         this.action = self.action;
         this.act    = self.act;
         this.track  = self.track;
-        this.ago    = timeSince;
+        this.utils  = self.utils;
+        this.SERVER = self.SERVER;
+        this.DEV    = self.DEV;
       }
     }
   }
@@ -111,36 +117,39 @@ function Riothing(cfg){
       }
     }
   }
-}
 
-const intervals = [
-  { label: 'year', seconds: 31536000 },
-  { label: 'month', seconds: 2592000 },
-  { label: 'day', seconds: 86400 },
-  { label: 'hour', seconds: 3600 },
-  { label: 'minute', seconds: 60 },
-  { label: 'second', seconds: 0 }
-];
+  function RiothingUtils(){
+    const intervals = [
+      { label: 'year',    seconds: 31536000 },
+      { label: 'month',   seconds: 2592000 },
+      { label: 'day',     seconds: 86400 },
+      { label: 'hour',    seconds: 3600 },
+      { label: 'minute',  seconds: 60 },
+      { label: 'second',  seconds: 0 }
+    ];
 
-function timeSince(timestamp = 0){
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  const interval = intervals.find(i => i.seconds < seconds);
-  const count = Math.floor(seconds / interval.seconds);
-  return `${count} ${interval.label}${count !== 1 ? 's' : ''} ago`;
-}
+    this.ago = (timestamp = 0, end = 'ago', multiple = 's') => {
+      const seconds   = Math.floor((Date.now() - timestamp) / 1000);
+      const interval  = intervals.find(i => i.seconds < seconds);
+      const count     = Math.floor(seconds / interval.seconds);
+      return `${count} ${interval.label}${count !== 1 && multiple} ${end}`;
+    }
 
-function extensionViewLoad(){
-  fetch(chrome.extension.getURL(viewFilePath))
-    .then(res   => res.text())
-    .then(html 	=> {
+    this.loadExtensionView = () =>
+      fetch(chrome.extension.getURL(viewFilePath))
+        .then(res   => res.text())
+        .then(html 	=> {
 
-      //Compile and mount tags
-      html = riot.compile(html, true);
-      eval(html);
-      riot.mount('*');
+          //Compile and mount tags
+          html = riot.compile(html, true);
+          eval(html);
+          riot.mount('*');
 
-      //Generate styling
-      fucss.glob = false;
-      return fucss.generateStyling({ riot: html, returnStyle: false })
-    })
+          //Generate styling
+          fucss.glob = false;
+          return fucss.generateStyling({ riot: html, returnStyle: false })
+        })
+
+    return this;
+  }
 }

@@ -5,17 +5,18 @@ const riot      = require('riot');
 const Module    = require('module');
 const path      = require('path');
 const fetch     = global.fetch = require('node-fetch');
-//const cookie    = require('cookie');
+const cookie    = require('cookie');
 
 const CLIENT = {
   VIEWS:    [],
   STORES:   [],
   ACTIONS:  [],
-  SCRIPT:   '',
+  //LIBS:     [],
+  SCRIPT:   ''
 };
 let riothing, Riothing;
 
-function Setup(cfg){
+function Setup(cfg, { app, routes }){
   const CFG = {
     //NODE_ENV
     DEV: false,
@@ -28,10 +29,13 @@ function Setup(cfg){
     // files
     CLIENT_FILE:     '/riothing.js',
     CONTENT_FILE:    '/content.json',
+    ROUTES_FILE:     '/routes.json',
     ROOT_FILE:       '/root.html',
     // rest
-    INCLUDE_CLIENT:     true,
-    INIT_ACTION_NAME:   'INIT_APP',
+    INCLUDE_CLIENT:   true,
+    CLIENTLESS:       false,
+    INIT_ACTION_NAME: 'INIT_APP',
+    TAG_NAME:         'tag-app',
   };
 
   Object.assign(CFG, cfg);
@@ -46,21 +50,23 @@ function Setup(cfg){
     CLIENT.STORES   = stores.slice().map(md   => md.client);
     CLIENT.VIEWS    = views.slice().map(md    => md.client);
     return {
-      actions: actions.slice().map(md => md.name),
-      stores: stores.slice().map(md => md.name)
+      actions:  actions.slice().map(md => md.name),
+      stores:   stores.slice().map(md => md.name),
+      routes:   routes,
     };
   })
-  .then(({ actions, stores }) => {
-    CLIENT.SCRIPT = utils.getScript(CFG.INCLUDE_CLIENT && CFG.CLIENT_FILE, { actions, stores }, CFG.INIT_ACTION_NAME, cfg);
+  .then(({ actions, stores, routes }) => {
+    CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { actions, stores, routes });
     utils.compileRiot(CFG.PUB_DIR + CFG.ROOT_FILE);
-    return { actions, stores };
+    return { actions, stores, routes };
   })
-  .then(({ actions, stores }) => {
+  .then(({ actions, stores, routes }) => {
     Riothing = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
     riothing = new Riothing({ actions, stores, DEV: CFG.DEV, VER: CFG.VER });
-    riothing.act(CFG.INIT_ACTION_NAME, cfg);
-    //console.log(utils.renderHTML(CLIENT));
-    return riothing;
+
+    // Acts on init action and initiates router
+    return riothing.act(CFG.INIT_ACTION_NAME, cfg)
+      .then(content => utils.router(app, routes, riothing));
   })
 }
 
@@ -128,18 +134,36 @@ utils.getFiles = (pub, dir, views) => {
 utils.toBase64 = (str) =>
   'data:text/javascript;base64,' + Buffer(str).toString('base64');
 
-utils.getScript = (clientPath, { actions, stores }, initActionName = 'INIT_APP', { DEV, VER }) => {
+utils.getScript = ({ INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, DEV, VER, TAG_NAME }, { actions, stores, routes }) => {
   let client = [];
-  clientPath && client.push(fs.readFileSync(__dirname + clientPath, 'utf8'));
+
+  if(INCLUDE_CLIENT && CLIENT_FILE)
+    client.push(fs.readFileSync(__dirname + CLIENT_FILE, 'utf8'));
+
   client.push(`
     var riothing = new Riothing({
       stores:   ${JSON.stringify(stores)},
       actions:  ${JSON.stringify(actions)},
+      routes:   ${JSON.stringify(routes)},
       DEV:      ${DEV},
       VER:      '${VER}'
     });
-    riothing.act('${initActionName}', {});
+    riothing.act('${INIT_ACTION_NAME}', {}).then(content => {
+      page('*', (req, next) => {
+        req.cookies = Cookies;
+        next();
+      });
+      riothing.routes.forEach(route => page(route.route, riothing.action(route.action)));
+      page.start();
+      riot.mount('${TAG_NAME}');
+    });
   `);
+
+  /**
+    route(page => riothing.act('APP_ROUTE', { page, query: route.query() }));
+    route.base('/');
+    route.start(1);
+  **/
   return utils.toBase64(client.join(';'));
 }
 
@@ -150,6 +174,33 @@ utils.renderHTML = (opts, tagName = 'html') => {
     <!DOCTYPE html>
     ${riot.render(tagName, opts)}
   `;
+}
+
+utils.render  = (req, res) => { res.send(res.render()) }
+utils.cookies = (req, res, next) => {
+  req.cookies = {
+    get: (val) => val && cookie.parse(req.headers.cookie || '')[val] || cookie.parse(req.headers.cookie || ''),
+    set: console.log
+  };
+  next();
+}
+
+utils.router = (app, routes, riothing) => {
+  /** TODO!!!
+      1. action chain ability
+      2. action as function ability
+      3. convert to express router instead of putting dircetly to app
+          "this would give us ability to mount multiple riothing apps with different routes"
+  **/
+  app.response.render = utils.renderHTML;
+  routes.forEach(route =>
+    route.route && app[route.method || 'get'](route.route || '/', [
+      utils.cookies,
+      riothing.action(route.action),
+      utils.render
+    ])
+  );
+  return riothing;
 }
 
 function ExternalModule(dir, file, fn){
