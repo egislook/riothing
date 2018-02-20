@@ -6,38 +6,42 @@ const Module    = require('module');
 const path      = require('path');
 const fetch     = global.fetch = require('node-fetch');
 const cookie    = require('cookie');
+const fucss     = require('fucss');
 
 const CLIENT = {
   VIEWS:    [],
   STORES:   [],
   ACTIONS:  [],
   //LIBS:     [],
-  SCRIPT:   ''
+  SCRIPT:   '',
 };
+
+const CFG = {
+  //NODE_ENV
+  DEV: false,
+  VER: '0.0.1',
+  // dirs
+  PUB_DIR:     './../public/',
+  STORE_DIR:   '/store',
+  ACTION_DIR:  '/action',
+  APP_DIR:     '/app',
+  // files
+  CLIENT_FILE:     '/riothing.js',
+  CONTENT_FILE:    '/content.json',
+  ROUTES_FILE:     '/routes.json',
+  ROOT_FILE:       '/root.html',
+  STYLE_FILE:      '/style.css',
+  // rest
+  INCLUDE_CLIENT:   true,
+  CLIENTLESS:       false,
+  INIT_ACTION_NAME: 'INIT_APP',
+  TAG_NAME:         'tag-app',
+  SERV_STYLE:       true,
+};
+
 let riothing, Riothing;
 
 function Setup(cfg, { app, routes }){
-  const CFG = {
-    //NODE_ENV
-    DEV: false,
-    VER: '0.0.1',
-    // dirs
-    PUB_DIR:     './../public/',
-    STORE_DIR:   '/store',
-    ACTION_DIR:  '/action',
-    APP_DIR:     '/app',
-    // files
-    CLIENT_FILE:     '/riothing.js',
-    CONTENT_FILE:    '/content.json',
-    ROUTES_FILE:     '/routes.json',
-    ROOT_FILE:       '/root.html',
-    // rest
-    INCLUDE_CLIENT:   true,
-    CLIENTLESS:       false,
-    INIT_ACTION_NAME: 'INIT_APP',
-    TAG_NAME:         'tag-app',
-  };
-
   Object.assign(CFG, cfg);
 
   return Promise.all([
@@ -58,12 +62,12 @@ function Setup(cfg, { app, routes }){
   .then(({ actions, stores, routes }) => {
     CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { actions, stores, routes });
     utils.compileRiot(CFG.PUB_DIR + CFG.ROOT_FILE);
+    CFG.SERV_STYLE && CFG.DEV && utils.compileStyle(CFG.PUB_DIR + CFG.STYLE_FILE);
     return { actions, stores, routes };
   })
   .then(({ actions, stores, routes }) => {
     Riothing = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
     riothing = new Riothing({ actions, stores, DEV: CFG.DEV, VER: CFG.VER });
-
     // Acts on init action and initiates router
     return riothing.act(CFG.INIT_ACTION_NAME, cfg)
       .then(content => utils.router(app, routes, riothing));
@@ -116,8 +120,19 @@ utils.clientRequire = (filePath, code, include) => {
   return m.exports;
 };
 
-utils.compileRiot = (filePath) =>
-  utils.clientRequire(filePath, riot.compile(fs.readFileSync(filePath, 'utf8')));
+utils.compileRiot = (filePath) => {
+  let riotStr = riot.compile(fs.readFileSync(filePath, 'utf8'));
+  fucss.storeHTML(riotStr);
+  return utils.clientRequire(filePath, riotStr);
+};
+
+utils.compileStyle = (filePath, html) =>
+  fs.writeFileSync(filePath, fucss.generateStyling({
+    riot: html || fucss.HTML.join(''),
+    returnStyle: true,
+    glob: true,
+    anim: true
+  }));
 
 utils.getFiles = (pub, dir, views) => {
   return utils.readDir(pub + dir)
@@ -159,17 +174,12 @@ utils.getScript = ({ INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, DEV, VER, TA
     });
   `);
 
-  /**
-    route(page => riothing.act('APP_ROUTE', { page, query: route.query() }));
-    route.base('/');
-    route.start(1);
-  **/
   return utils.toBase64(client.join(';'));
 }
 
 
 utils.renderHTML = (opts, tagName = 'html') => {
-  opts = opts || CLIENT;
+  opts = opts || Object.assign({}, CLIENT, CFG);
   return  `
     <!DOCTYPE html>
     ${riot.render(tagName, opts)}

@@ -18,6 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "cookie": "^0.3.1",
+    "fucss": "^0.7.3",
     "node-fetch": "^1.7.3",
     "riot": "^3.7.3"
   },
