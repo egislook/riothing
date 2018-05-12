@@ -1,0 +1,30 @@
+/** Fucss globals */ 
+html, body{min-height: 100%; height: 100%;}
+body{margin: 0; text-align: center; border-width: 0;              font-family: "Helvetica Neue", "Calibri Light", Roboto, sans-serif;letter-spacing: 0.02em;}
+*{outline: 0; padding: 0; box-sizing: border-box; border-style: solid; border-width: 0; vertical-align: baseline;}
+*:not([display="flex"]) > *{margin: 0 auto;}
+a{text-decoration: none; color: inherit;}
+a, span, img, button, i, label{display: inline-block; vertical-align: middle;}
+button, a, i, label, img{cursor: pointer; font-style: normal;}
+input, button, select, option, textarea{font-size: 100%; font-family: inherit;}
+::selection{background: #ff7854; color: #fff;}
+[contenteditable]{cursor: text}
+[contenteditable]:empty:before{content: attr(placeholder); opacity: 0.5; display: block;}
+/** Fucss class rules */ 
+.ff\:Questrial{font-family:"Questrial";}
+.c\:txt{color:#303030;}
+.fw\:300{font-weight:300;}
+.fs\:15px{font-size:15px;}
+.lh\:1\.3{line-height:1.3;}
+.bg\:f1f1f1{background:#f1f1f1;}
+.ts\:ft-1s{transition:filter 1s cubic-bezier(0.23, 1, 0.32, 1);}
+.h\:100pc{height:100%;}
+.jc\:sb{justify-content:space-between;}
+.blr\:1px{filter:blur(1px);}
+@media only screen and (min-width: 768px) {
+.md-fs\:16px{font-size:16px;}
+.md-dp\:flx{display:flex;}
+}
+@keyframes spin{to { transform: rotate(360deg); }}
+@keyframes fadeIn{from {opacity: 0.3;} to {opacity: 1;}}
+@keyframes fadeOut{from {opacity: 1;} to {opacity: 0.5;}}

@@ -1,7 +1,7 @@
 function Riothing(cfg){
   const SERVER = this.SERVER = typeof module === 'object';
-  const DEV    = this.DEV    = cfg.DEV;
-  const VER    = this.VER    = cfg.VER;
+  const DEV    = this.DEV    = cfg.ENV.DEV;
+  const VER    = this.VER    = cfg.ENV.VER;
 
   this.utils = new RiothingUtils();
 
@@ -15,8 +15,14 @@ function Riothing(cfg){
 
 
   this.store  = (storeName)   => this.stores[storeName];
-  this.action = (actionName)  => this.actions[actionName];
-  this.act    = (actionName, payload, cb) => this.actions[actionName] && this.actions[actionName](payload, cb);
+  this.action = (actionName)  => this.actions[actionName] && this.actions[actionName] 
+    || function(){ console.warn(actionName + ' action does not exist')};
+    
+  this.act    = (actionName, payload, cb) => {
+    console.log('[RIOTHING]', actionName, !this.actions[actionName] && 'missing action' || 'action triggered');
+    return this.actions[actionName] && this.actions[actionName](payload, cb) 
+      || Promise.resolve( function(){ console.log('missing action ' + actionName)} );
+  }
 
   this.track = this.on;
 
@@ -45,7 +51,7 @@ function Riothing(cfg){
 
       for(let actionName in acts){
         this.actions[actionName] = acts[actionName].bind(this);
-        this.actionNames.push(actionName);
+        this.actionNames.concat([ actionName ]);
       }
     });
   }
@@ -57,17 +63,17 @@ function Riothing(cfg){
         : parent[storeFileName];
 
       if(!storeFunction)
-        return console.warn(`"${storeFile}" does not have function`);
+        return console.warn(`"${storeFileName}" does not have function`);
 
       let store = storeFunction();
 
       this.stores[store.name] = new riothingStore(store.name, store, this);
-      this.storeNames.push(store.name);
+      this.actionNames.concat([ store.name ]);
     });
   }
 
   function riothingMixin(self){
-    console.log('init Mixin');
+    console.log('[RIOTHING] initialise mixin');
     return {
       init: function(){
         this.store  = self.store;
