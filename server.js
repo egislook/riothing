@@ -16,6 +16,7 @@ const CLIENT = {
   ACTIONS:  [],
   //LIBS:     [],
   SCRIPT:   '',
+  DATA:     false
 };
 
 let CFG = {
@@ -28,77 +29,88 @@ let CFG = {
     VER: '0.0.1',
     URL: false
   },
-  // dirs
-  PUB_DIR:     process.cwd() + '/public',
-  DEF_DIR:     __dirname + '/default',
-  STORE_DIR:   '/store',
-  ACTION_DIR:  '/action',
-  APP_DIR:     '/app',
+  // directories
+  PUB_DIR:      process.cwd() + '/public',
+  DEF_DIR:      __dirname + '/default',
+  STORE_DIR:    '/store',
+  ACTION_DIR:   '/action',
+  DATA_DIR:     '/data',
+  APP_DIR:      '/app',
   // files
   CLIENT_FILE:     '/riothing.js',
-  CONTENT_FILE:    '/data/content.json',
-  ROUTES_FILE:     '/data/routes.json',
   ROOT_FILE:       '/root.html',
   STYLE_FILE:      '/style.css',
   // rest
   INCLUDE_CLIENT:       true,
   CLIENTLESS:           false,
-  INIT_ACTION_NAME:     'APP_INIT',
-  EXTERNAL_ACTION_NAME: 'APP_EXTERNAL',
-  TAG_NAME:             'tag-app',
   SERV_STYLE:           true,
+  // tags
+  TAG_NAME:               'tag-app',
+  DEF_STORE_NAME:         'def',
+  // action names
+  INIT_DEF_ACTION_NAME:   'DEF_INIT',
+  INIT_ACTION_NAME:       'APP_INIT',
+  INIT_DATA_ACTION_NAME:  'APP_INIT_DATA',
+  EXTERNAL_ACTION_NAME:   'APP_EXTERNAL',
 };
 
 let riothing, Riothing;
 
-function Setup(cfg, { app, routes }){
+function Setup(cfg){
   CFG = utils.configure(cfg);
   
   // collects all actions, stores and views including defaults
   return Promise.all([
-    utils.compileExtras(CFG.PUB_DIR, CFG.ACTION_DIR, CFG.DEF_DIR),
-    utils.compileExtras(CFG.PUB_DIR, CFG.STORE_DIR, CFG.DEF_DIR),
-    utils.compileExtras(CFG.PUB_DIR, CFG.APP_DIR, CFG.DEF_DIR, true)
+    utils.compileWithDefaults(CFG.PUB_DIR, CFG.ACTION_DIR, CFG.DEF_DIR),
+    utils.compileWithDefaults(CFG.PUB_DIR, CFG.STORE_DIR, CFG.DEF_DIR),
+    utils.compileWithDefaults(CFG.PUB_DIR, CFG.APP_DIR, CFG.DEF_DIR, true),
   ])
   .then(([actions, stores, views]) => {
-    
     // delivers links for client to print on root
     CLIENT.ACTIONS  = actions.filter(md => md.type !== 'default').map(md  => md.client);
     CLIENT.STORES   = stores.filter(md => md.type !== 'default').map(md   => md.client);
     CLIENT.VIEWS    = views.filter(md => md.type !== 'default').map(md    => md.client);
-    
     // returns the function names and extras to execute on client and server including routes
     return {
       actions:  actions.slice().map(md => md.name),
       stores:   stores.slice().map(md => md.name),
-      routes:   utils.compileRoutes(CFG.PUB_DIR, CFG.ROUTES_FILE, CFG.DEF_DIR),
       defaults:   [
         actions.filter(md => md.type === 'default').map(md => md.code).join(),
         stores.filter(md => md.type === 'default').map(md => md.code).join(),
-        views.filter(md => md.type === 'default').map(md => md.code).join()
+        views.filter(md => md.type === 'default').map(md => md.code).join('\n')
       ]
     };
   })
-  .then(({ actions, stores, routes, defaults }) => {
-    
+  .then(({ actions, stores, defaults }) => {
     //style compilation missing
-    
     // compiles and converts client initial function to script string
-    CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { actions, stores, routes, defaults });
+    CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { actions, stores, defaults });
     
     // compiles root file
     utils.compileRoot(CFG.PUB_DIR, CFG.ROOT_FILE, CFG.DEF_DIR);
     
-    return { actions, stores, routes };
-  })
-  .then(({ actions, stores, routes }) => {
-    // initiates Riothing
+    // init riothing
     Riothing = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
-    riothing = new Riothing({ actions, stores, routes, ENV: CFG.ENV });
+    riothing = new Riothing({ actions, stores, DEV: CFG.ENV.DEV });
+    
+    return riothing;
+  })
+  .then( riothing => 
+    utils.compileAndMerge(CFG.PUB_DIR, CFG.DATA_DIR, CFG.DEF_DIR).then( data => ({
+      riothing,
+      data: Object.assign(data, CFG.ENV),
+    }))
+  )
+  .then( ({ riothing, data }) => {
+    // Init client data
+    CLIENT.DATA = data;
+    // Init Riothing
     
     // Acts on init action and initiates router
-    return riothing.act(CFG.INIT_ACTION_NAME, cfg)
-      .then(content => utils.router(app, routes, riothing));
+    return riothing.act(CFG.INIT_DEF_ACTION_NAME, data)
+      .then( data => riothing.act(CFG.INIT_ACTION_NAME, data))
+      .then( data => utils.router(data, riothing))
+      
   })
 }
 
@@ -216,7 +228,7 @@ utils.compileStyle = (pub, file, html) => {
   }
   return fs.writeFileSync(pub + file, cssStr) && false;
 }
-  
+
 utils.compileRoutes = (pub, file, def) => {
   const defaultRoutes = require(def + file);
   if(!fs.existsSync(pub + file)){
@@ -237,10 +249,23 @@ utils.compileRoot = (pub, file, def) => {
   }
   
   utils.compileRiot(pub + file)
-  
 }
 
-utils.compileExtras = (pub, dir, def, views) => {
+utils.compileAndMerge = (pub, dir, def) => {
+  return utils.compileWithDefaults(pub, dir, def).then( mds => mds.reduce( (obj, item) => {
+    if(obj[item.name] && obj[item.name].constructor === Array){
+      obj[item.name] = obj[item.name].concat(item.data[item.name]).reduce( (arr, item, i, all) => {
+        item.route && !arr.find( el => el.route === item.route ) && arr.push(item);
+        return arr;
+      }, []);
+      return obj;
+    }
+      
+    return Object.assign(obj, item.data);
+  }, {} ));
+}
+
+utils.compileWithDefaults = (pub, dir, def, views) => {
   var links = [ 
     { path: def, type: 'default' }, 
     { path: pub } 
@@ -272,7 +297,10 @@ utils.toBase64 = (str) =>
   
 utils.message = msg => console.warn('[RIOTHING]', msg);
 
-utils.getScript = ({ INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV }, { actions, stores, routes, defaults }) => {
+utils.getScript = (
+  { INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV, INIT_DEF_ACTION_NAME, DEF_STORE_NAME }, 
+  { actions, stores, defaults }
+) => {
   let client = [];
   
   // includes riothing client function 
@@ -286,18 +314,23 @@ utils.getScript = ({ INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, EN
     var riothing = new Riothing({
       actions:  ${JSON.stringify(actions)},
       stores:   ${JSON.stringify(stores)},
-      routes:   ${JSON.stringify(routes)},
-      ENV:      ${JSON.stringify(ENV)},
+      DEV:      ${ENV.DEV},
     });
-    riothing.act('${INIT_ACTION_NAME}', {}).then(content => {
-      page('*', (req, next) => {
-        req.cookies = Cookies;
-        next();
+    riothing.act('${INIT_DEF_ACTION_NAME}', window.DATA)
+      .then(data => riothing.act('${INIT_ACTION_NAME}', data))
+      .then(content => {
+        page('*', (req, next) => {
+          req.cookies = Cookies;
+          next();
+        });
+        riothing.store('${DEF_STORE_NAME}').get('routes').forEach(route => 
+          page(route.route, (req, next) => {
+            riothing.action('APP_SET_ROUTE')(route, req);
+            riothing.action(route.action)(req);
+          }));
+        page.start();
+        riot.mount('${TAG_NAME}');
       });
-      riothing.routes.forEach(route => page(route.route, riothing.action(route.action)));
-      page.start();
-      riot.mount('${TAG_NAME}');
-    });
   `);
 
   return utils.toBase64(client.join(';'));
@@ -306,10 +339,16 @@ utils.getScript = ({ INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, EN
 
 utils.renderHTML = (opts, tagName = 'html') => {
   opts = opts || Object.assign({}, CLIENT, CFG);
-  return  `
+  let html =  (`
     <!DOCTYPE html>
     ${riot.render(tagName, opts)}
-  `;
+  `);
+  
+  // includes data
+  if(opts.DATA) 
+    html = html.replace('</head>', `<script> window.DATA = ${JSON.stringify(opts.DATA)} </script></head>`)
+    
+  return html;
 }
 
 utils.render  = (req, res) => { res.send(res.render()) }
@@ -320,21 +359,26 @@ utils.cookies = (req, res, next) => {
   };
   next();
 }
+utils.storer = (req, res, next) => {
+  
+}
 
-utils.router = (app, routes, riothing) => {
+utils.router = (data, riothing) => {
   /** TODO!!!
       1. action chain ability
       2. action as function ability
-      3. convert to express router instead of putting dircetly to app
+      3. convert to separate express routers instead of using * dircetly on app
           "this would give us ability to mount multiple riothing apps with different routes"
   **/
   app.response.render = utils.renderHTML;
-  routes.forEach(route =>
+  riothing.store(CFG.DEF_STORE_NAME).get('routes').forEach(route =>
     route.route && app[route.method || 'get'](route.route || '/', [
       utils.cookies,
       (req, res, next) => {
-        return riothing.action(route.action)(req, res).then( () => utils.render(req, res))
-      }
+        riothing.action('APP_SET_ROUTE')(route, req);
+        return next();
+      },
+      (req, res, next) => riothing.action(route.action)(req, res).then( () => utils.render(req, res))
     ])
   );
   return riothing;
@@ -350,10 +394,19 @@ function ExternalModule(dir, file, fn, type){
   this.client = '.' + dir + file;
   this.fn   = typeof fn === 'function' && fn;
   this.code = typeof fn === 'function' ? fn.toString() : typeof fn === 'string' && fn;
-  this.name = this.fn && fn.name || fn;
-  if(this.fn) global[this.name] = this.fn;
-  if(type) this.type = type;
-
+  this.data = typeof fn === 'object' && fn;
+  this.name = typeof fn === 'string' && fn || fn.name || file.replace('/', '').replace('.json', '');
+  
+  if(this.fn) 
+    global[this.name] = this.fn;
+  
+  if(type) 
+    this.type = type;
+  
+  //console.log(this.data.constructor, file)
+  if(this.data && (this.data.constructor === Array || Object.keys(this.data).length > 4))
+    this.data = { [this.name]: this.data };
+  
   return this;
 }
 

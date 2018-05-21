@@ -1,13 +1,13 @@
 function Riothing(cfg){
   const SERVER = this.SERVER = typeof module === 'object';
-  const DEV    = this.DEV    = cfg.ENV.DEV;
-  const VER    = this.VER    = cfg.ENV.VER;
+  const CLIENT = this.CLIENT = !SERVER;
+  const DEV    = this.DEV    = cfg.DEV;
 
   this.utils = new RiothingUtils();
 
   riot.observable(this);
 
-  this.routes       = cfg.routes;
+  this.routes       = cfg.data && cfg.data.routes;
   this.actionNames  = [];
   this.storeNames   = [];
   this.actions      = {};
@@ -30,12 +30,12 @@ function Riothing(cfg){
 
   //console.log(this);
 
-  function init({ actions, stores }){
+  function init({ actions, stores, data }){
     //init riothing mixin
     riot.mixin('riothing', riothingMixin(this));
     //init actions & stores
     initActions.bind(this)(actions);
-    initStores.bind(this)(stores);
+    initStores.bind(this)(stores, data);
   }
 
   function initActions(actions){
@@ -56,7 +56,7 @@ function Riothing(cfg){
     });
   }
 
-  function initStores(stores){
+  function initStores(stores, data){
     stores.forEach(storeFileName => {
       const storeFunction = SERVER
         ? global[storeFileName]
@@ -82,6 +82,7 @@ function Riothing(cfg){
         this.track  = self.track;
         this.utils  = self.utils;
         this.SERVER = self.SERVER;
+        this.CLIENT = self.CLIENT;
         this.DEV    = self.DEV;
       }
     }
@@ -114,7 +115,8 @@ function Riothing(cfg){
       return this.state;
     }
 
-    this.act = (actionName, payload, cb) => this.actions[actionName] && this.actions[actionName](payload, cb);
+    this.act = (actionName, payload, cb) => 
+      this.actions[actionName] && this.actions[actionName](payload, cb);
 
     function initStore({ actions }){
       for(let actionName in actions){
@@ -135,10 +137,11 @@ function Riothing(cfg){
     ];
 
     this.ago = (timestamp = 0, end = 'ago', multiple = 's') => {
+      timestamp = new Date(timestamp).getTime();
       const seconds   = Math.floor((Date.now() - timestamp) / 1000);
       const interval  = intervals.find(i => i.seconds < seconds);
       const count     = Math.floor(seconds / interval.seconds);
-      return `${count} ${interval.label}${count !== 1 && multiple} ${end}`;
+      return `${count} ${interval.label}${count !== 1 && multiple || ''} ${end}`;
     }
 
     this.loadExtensionView = () =>
@@ -155,6 +158,29 @@ function Riothing(cfg){
           fucss.glob = false;
           return fucss.generateStyling({ riot: html, returnStyle: false })
         })
+        
+    this.gql = ({ query, GQ, token, variables }) =>
+      fetch('https://api.graph.cool/simple/v1/' + GQ, {
+        method: 'POST',
+        headers: { 
+          'content-type': 'application/json',
+          'authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ query, variables })
+      })
+      .then( res => res.json() )
+      .then( json => {
+        if(json.errors){
+          const error = json.errors.shift();
+          throw error.functionError
+        }
+        return json.data 
+      })
+      .then( data => {
+        const keys = Object.keys(data);
+        return keys.length && data[keys.shift()];
+      })
+      .catch( error => ({ error }) )
 
     return this;
   }
