@@ -22,7 +22,7 @@
 		<link rel="icon" type="image/x-icon" href={ meta.favicon } />
 		<!-- stylesheets -->
 		<link if={STYLES} each={style in STYLES} href={style} rel="stylesheet" />
-		<link if={SERV_STYLE} rel="stylesheet" href="./style.css" />
+		<link if={SERV_STYLE} rel="stylesheet" href="/style.css" />
 		<!-- prefetch -->
 		<link if={PREFETCH} each={file in PREFETCH} href={file} />
 		
@@ -53,8 +53,8 @@
 				    description:	'Riothing is lite framework for riot isomporphic apps',
 				    author: 			'egislook',
 				    url:					'https://github.com/egislook/riothing',
-				    favicon:			'https://coinmarks.herokuapp.com/img/favicon.ico',
-				    image:				'https://s3.amazonaws.com/coursetro/posts/92-full.png',
+				    favicon:			'/img/favicon.png',
+				    image:				'/img/cover.png',
 			  },
 				LIBS: [
 					'https://cdnjs.cloudflare.com/ajax/libs/riot/3.7.2/riot+compiler.min.js',

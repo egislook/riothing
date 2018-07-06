@@ -4,34 +4,27 @@ function defaultStore(initState){
     name:       'def',
     state:      initState,
     models:     {},
+    actions:    {
+      STORE_SET_ROUTE: function(data){
+        return this.state.setRoute(data);
+      }
+    },
     model:      StateDef,
   };
   
-  function StateDef(data = {}, prev = {}, def, act){
-    Object.assign(this, prev);
+  function StateDef({ routes, ENV }, prev = {}, def, act){
     
-    if(data.routes)
-      this.routes = data.routes;
-    
-    if(data.query)
-      this.query = data.query;
-    
-    if(data.cookies)
-      this.cookies = data.cookies;
-    
-    if(data.route)
-      this.route = data.route;
-    
-    if(data.params)
-      this.params = data.params;
-    
-    if(data.URL)
-      this.url = data.URL;
-    
-    if(data.VER)
-      this.version = data.VER;
+    this.routes   = routes;
+    this.url      = ENV.URL;
+    this.version  = ENV.VER;
       
-    //console.log('StateApp', this);
+    this.setRoute = ({ query, cookies, route, params }) => {
+      this.query    = query;
+      this.cookies  = cookies;
+      this.route    = route;
+      this.params   = params;
+      return this;
+    }
 
     return this;
   }

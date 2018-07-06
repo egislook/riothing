@@ -1,7 +1,8 @@
 function Riothing(cfg){
   const SERVER = this.SERVER = typeof module === 'object';
   const CLIENT = this.CLIENT = !SERVER;
-  const DEV    = this.DEV    = cfg.DEV;
+  const ENV    = this.ENV    = cfg.ENV;
+  const DEV    = this.DEV    = true;
 
   this.utils = new RiothingUtils();
 
@@ -91,11 +92,18 @@ function Riothing(cfg){
   function riothingStore(name, { state, model, actions }, self){
 
     this.name         = name;
-    this.model        = model;
+    this.model        = model || {};
     this.state        = state || {};
     this.actions      = {};
     this.actionNames  = [];
     this.trigger      = self.trigger;
+    
+    this.model.prototype.set = this.model.prototype.set || (data => {
+      const keys = Object.keys(data);
+      console.log(keys);
+      keys && keys.length && keys.forEach( key => this.state[key] = data[key] );
+      return this.state;
+    });
 
     initStore.bind(this)({ actions });
 
@@ -104,9 +112,13 @@ function Riothing(cfg){
       : this.state;
 
     this.set = (data, triggerName) => {
-      Object.assign(this.state, model && new model(data) || data)
-      triggerName && self.trigger(triggerName, this.state);
-      return this.state;
+      if(!this.state.set)
+        this.state = this.model && new this.model(data);
+      
+      return this.state.set(data);
+        
+      //Object.assign(this.state, model && new model(data) || data)
+      //triggerName && self.trigger(triggerName, this.state);
     }
 
     this.restate = (data, triggerName) => {
@@ -117,6 +129,8 @@ function Riothing(cfg){
 
     this.act = (actionName, payload, cb) => 
       this.actions[actionName] && this.actions[actionName](payload, cb);
+    
+    this.action = (actionName) => this.actions[actionName] && this.actions[actionName] 
 
     function initStore({ actions }){
       for(let actionName in actions){
@@ -159,8 +173,9 @@ function Riothing(cfg){
           return fucss.generateStyling({ riot: html, returnStyle: false })
         })
         
-    this.gql = ({ query, GQ, token, variables }) =>
-      fetch('https://api.graph.cool/simple/v1/' + GQ, {
+    this.gql = ({ query, GQ, token, variables }) => {
+      GQ = ENV.GQ || GQ;
+      return fetch('https://api.graph.cool/simple/v1/' + GQ, {
         method: 'POST',
         headers: { 
           'content-type': 'application/json',
@@ -181,6 +196,54 @@ function Riothing(cfg){
         return keys.length && data[keys.shift()];
       })
       .catch( error => ({ error }) )
+    }
+    
+    this.gqlWs = ({ GQ, token, queries = [], action }) => {
+      GQ = ENV.GQ || GQ;
+      
+      const webSocket = new WebSocket('wss://subscriptions.ap-northeast-1.graph.cool/v1/' + GQ, 'graphql-subscriptions');
+      
+      webSocket.onopen = e => {
+        webSocket.send(JSON.stringify({
+          type: 'init',
+          payload: {
+            Authorization: `Bearer ${token}`
+          }
+        }))
+      }
+      
+      webSocket.onmessage = e => {
+        const data = JSON.parse(e.data);
+        
+        switch(data.type){
+          
+          case 'init_success':
+            console.log('[RIOTHING]', 'Socket Connected');
+            queries.forEach( (query, id) => webSocket.send(JSON.stringify({
+              id,
+              type: 'subscription_start',
+              query
+            })))
+          break;
+          
+          case 'subscription_data':
+            const payload = data.payload.data;
+            const keys = Object.keys(payload);
+            action && action(keys.length && payload[keys.shift()])
+          break;
+          
+          case 'init_fail': {
+            throw {
+              message: 'init_fail returned from WebSocket server',
+              data
+            }
+          }
+          
+        }
+      }
+      
+      return webSocket;
+    }
 
     return this;
   }

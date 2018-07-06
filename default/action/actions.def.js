@@ -26,14 +26,15 @@ function defaultActions(){
     },
     
     APP_SET_ROUTE: function(route, req){
-      const state = this.store('def').set({
+      
+      const state = this.store('def').action('STORE_SET_ROUTE')({
         route,
         query:    req.query,
         cookies:  req.cookies.get(),
         params:   req.params
       });
       this.trigger('APP_SET_ROUTE', state.params);
-      //console.log('FROM SET ROUTE', this.store('app'));
+      return Promise.resolve('loaded');
     },
     
     APP_ROUTE: function(req, res){

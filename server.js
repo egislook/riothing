@@ -91,14 +91,14 @@ function Setup(cfg){
     
     // init riothing
     Riothing = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
-    riothing = new Riothing({ actions, stores, DEV: CFG.ENV.DEV });
+    riothing = new Riothing({ actions, stores, ENV: CFG.ENV });
     
     return riothing;
   })
   .then( riothing => 
     utils.compileAndMerge(CFG.PUB_DIR, CFG.DATA_DIR, CFG.DEF_DIR).then( data => ({
       riothing,
-      data: Object.assign(data, CFG.ENV),
+      data: Object.assign(data, { ENV: CFG.ENV }),
     }))
   )
   .then( ({ riothing, data }) => {
@@ -134,6 +134,7 @@ module.exports.server = (cfg) => {
     DEV: cfg.env  || process.env.NODE_ENV === 'development',
     URL: cfg.url  || process.env.URL || `https://${CFG.IP}:${CFG.PORT}`,
     VER: cfg.ver  || process.env.npm_package_version,
+    GQ:  cfg.gq
   };
   
   utils.configure(cfg, ENV);
@@ -314,7 +315,7 @@ utils.getScript = (
     var riothing = new Riothing({
       actions:  ${JSON.stringify(actions)},
       stores:   ${JSON.stringify(stores)},
-      DEV:      ${ENV.DEV},
+      ENV:      ${JSON.stringify(ENV)},
     });
     riothing.act('${INIT_DEF_ACTION_NAME}', window.DATA)
       .then(data => riothing.act('${INIT_ACTION_NAME}', data))
@@ -326,6 +327,7 @@ utils.getScript = (
         riothing.store('${DEF_STORE_NAME}').get('routes').forEach(route => 
           page(route.route, (req, next) => {
             riothing.action('APP_SET_ROUTE')(route, req);
+            //riothing.store('${DEF_STORE_NAME}').action('STORE_SET_ROUTE')(route, req);
             riothing.action(route.action)(req);
           }));
         page.start();
@@ -339,6 +341,7 @@ utils.getScript = (
 
 utils.renderHTML = (opts, tagName = 'html') => {
   opts = opts || Object.assign({}, CLIENT, CFG);
+  
   let html =  (`
     <!DOCTYPE html>
     ${riot.render(tagName, opts)}
@@ -347,7 +350,6 @@ utils.renderHTML = (opts, tagName = 'html') => {
   // includes data
   if(opts.DATA) 
     html = html.replace('</head>', `<script> window.DATA = ${JSON.stringify(opts.DATA)} </script></head>`)
-    
   return html;
 }
 
@@ -376,9 +378,10 @@ utils.router = (data, riothing) => {
       utils.cookies,
       (req, res, next) => {
         riothing.action('APP_SET_ROUTE')(route, req);
+        //riothing.store(CFG.DEF_STORE_NAME).action('STORE_SET_ROUTE')(route, req);
         return next();
       },
-      (req, res, next) => riothing.action(route.action)(req, res).then( () => utils.render(req, res))
+      (req, res, next) => riothing.action(route.action)(req, res).then( (msg) => utils.render(req, res))
     ])
   );
   return riothing;
@@ -391,7 +394,7 @@ utils.configure = (cfg, env) => {
 }
 
 function ExternalModule(dir, file, fn, type){
-  this.client = '.' + dir + file;
+  this.client = dir + file;
   this.fn   = typeof fn === 'function' && fn;
   this.code = typeof fn === 'function' ? fn.toString() : typeof fn === 'string' && fn;
   this.data = typeof fn === 'object' && fn;

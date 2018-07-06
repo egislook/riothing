@@ -19,7 +19,7 @@
   "dependencies": {
     "cookie": "^0.3.1",
     "express": "^4.16.3",
-    "fucss": "^0.7.3",
+    "fucss": "^0.7.6",
     "node-fetch": "^1.7.3",
     "riot": "^3.7.3"
   },
