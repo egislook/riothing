@@ -381,7 +381,10 @@ utils.router = (data, riothing) => {
         //riothing.store(CFG.DEF_STORE_NAME).action('STORE_SET_ROUTE')(route, req);
         return next();
       },
-      (req, res, next) => riothing.action(route.action)(req, res).then( (msg) => utils.render(req, res))
+      (req, res, next) => riothing.action(route.action)(req, res).then( (msg) => { 
+        utils.render(req, res);
+        riothing.restate();
+      })
     ])
   );
   return riothing;

@@ -15,8 +15,8 @@ function defaultStore(initState){
   function StateDef({ routes, ENV }, prev = {}, def, act){
     
     this.routes   = routes;
-    this.url      = ENV.URL;
-    this.version  = ENV.VER;
+    this.url      = ENV && ENV.URL;
+    this.version  = ENV && ENV.VER;
       
     this.setRoute = ({ query, cookies, route, params }) => {
       this.query    = query;

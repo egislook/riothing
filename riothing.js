@@ -24,6 +24,8 @@ function Riothing(cfg){
     return this.actions[actionName] && this.actions[actionName](payload, cb) 
       || Promise.resolve( function(){ console.log('missing action ' + actionName)} );
   }
+  
+  this.restate = () => this.storeNames.forEach( storeName => this.store(storeName).restate() )
 
   this.track = this.on;
 
@@ -52,7 +54,7 @@ function Riothing(cfg){
 
       for(let actionName in acts){
         this.actions[actionName] = acts[actionName].bind(this);
-        this.actionNames.concat([ actionName ]);
+        this.actionNames = this.actionNames.concat([ actionName ]);
       }
     });
   }
@@ -69,7 +71,7 @@ function Riothing(cfg){
       let store = storeFunction();
 
       this.stores[store.name] = new riothingStore(store.name, store, this);
-      this.actionNames.concat([ store.name ]);
+      this.storeNames = this.storeNames.concat([ store.name ]);
     });
   }
 
@@ -100,7 +102,6 @@ function Riothing(cfg){
     
     this.model.prototype.set = this.model.prototype.set || (data => {
       const keys = Object.keys(data);
-      console.log(keys);
       keys && keys.length && keys.forEach( key => this.state[key] = data[key] );
       return this.state;
     });
@@ -116,14 +117,11 @@ function Riothing(cfg){
         this.state = this.model && new this.model(data);
       
       return this.state.set(data);
-        
-      //Object.assign(this.state, model && new model(data) || data)
       //triggerName && self.trigger(triggerName, this.state);
     }
 
-    this.restate = (data, triggerName) => {
-      this.state = model && new model(data) || data;
-      triggerName && self.trigger(triggerName, this.state);
+    this.restate = (data) => {
+      this.state = this.model && new this.model(data || this.state);
       return this.state;
     }
 
