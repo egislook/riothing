@@ -91,50 +91,40 @@ function Riothing(cfg){
     }
   }
 
-  function riothingStore(name, { state, model, actions }, self){
+  function riothingStore(name, { state, model }, self){
 
     this.name         = name;
     this.model        = model || {};
     this.state        = state || {};
-    this.actions      = {};
-    this.actionNames  = [];
-    this.trigger      = self.trigger;
+    //this.trigger      = self.trigger;
     
-    this.model.prototype.set = this.model.prototype.set || (data => {
-      const keys = Object.keys(data);
-      keys && keys.length && keys.forEach( key => this.state[key] = data[key] );
-      return this.state;
-    });
-
-    initStore.bind(this)({ actions });
+    /** Pimp the model */
+    if(!this.model.prototype.set)
+      this.model.prototype.set = data => 
+        Object.keys(data).forEach( key => this.state[key] ? this.state[key] = data[key] : null ) && this.state;
 
     this.get = (key) => key
       ? key.split('.').reduce((o,i) => o[i], this.state)
       : this.state;
 
-    this.set = (data, triggerName) => {
-      if(!this.state.set)
-        this.state = this.model && new this.model(data);
+    /** now u can set using setter function inside the state */
+    this.set = (data, obj) => {
+      !this.state.set && this.restate(data);
       
-      return this.state.set(data);
+      if(typeof data === 'object')
+        return this.state.set(data);
+      
+      return this.setter(data) && this.setter(data)(obj);
+      
+      
       //triggerName && self.trigger(triggerName, this.state);
     }
+    
+    this.setter = setterName => typeof this.state[setterName] === 'function' && this.state[setterName];
 
     this.restate = (data) => {
       this.state = this.model && new this.model(data || this.state);
-      return this.state;
-    }
-
-    this.act = (actionName, payload, cb) => 
-      this.actions[actionName] && this.actions[actionName](payload, cb);
-    
-    this.action = (actionName) => this.actions[actionName] && this.actions[actionName] 
-
-    function initStore({ actions }){
-      for(let actionName in actions){
-        this.actions[actionName] = actions[actionName].bind(this);
-        this.actionNames.push(actionName);
-      }
+      return this.get();
     }
   }
 
@@ -241,6 +231,21 @@ function Riothing(cfg){
       }
       
       return webSocket;
+    }
+    
+    this.cloneObject = obj => {
+      let output = JSON.parse(JSON.stringify(obj));
+      
+      function deep(o){
+        let key, out = {};
+        for(key in o){
+          if(typeof o[key] !== 'object') console.log(o[key]);
+          out[key] = (typeof o[key] === 'object') ? deep(o[key]) : o[key];
+        }
+        return out;
+      }
+      
+      return Object.assign(output, deep(obj));
     }
 
     return this;

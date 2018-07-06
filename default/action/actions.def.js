@@ -27,7 +27,7 @@ function defaultActions(){
     
     APP_SET_ROUTE: function(route, req){
       
-      const state = this.store('def').action('STORE_SET_ROUTE')({
+      const state = this.store('def').set('STORE_ROUTE_ATTR', {
         route,
         query:    req.query,
         cookies:  req.cookies.get(),

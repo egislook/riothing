@@ -327,7 +327,6 @@ utils.getScript = (
         riothing.store('${DEF_STORE_NAME}').get('routes').forEach(route => 
           page(route.route, (req, next) => {
             riothing.action('APP_SET_ROUTE')(route, req);
-            //riothing.store('${DEF_STORE_NAME}').action('STORE_SET_ROUTE')(route, req);
             riothing.action(route.action)(req);
           }));
         page.start();
@@ -361,9 +360,6 @@ utils.cookies = (req, res, next) => {
   };
   next();
 }
-utils.storer = (req, res, next) => {
-  
-}
 
 utils.router = (data, riothing) => {
   /** TODO!!!
@@ -377,14 +373,13 @@ utils.router = (data, riothing) => {
     route.route && app[route.method || 'get'](route.route || '/', [
       utils.cookies,
       (req, res, next) => {
+        
+        riothing.restate();
         riothing.action('APP_SET_ROUTE')(route, req);
         //riothing.store(CFG.DEF_STORE_NAME).action('STORE_SET_ROUTE')(route, req);
         return next();
       },
-      (req, res, next) => riothing.action(route.action)(req, res).then( (msg) => { 
-        utils.render(req, res);
-        riothing.restate();
-      })
+      (req, res, next) => riothing.action(route.action)(req, res).then( msg => utils.render(req, res) )
     ])
   );
   return riothing;
