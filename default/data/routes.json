@@ -1,10 +1,10 @@
 [
   {
-    "route":  "/:page?",
+    "route":  "/:page?/:id?",
     "action": "APP_ROUTE"
   },
   {
     "route": "/about",
-    "action": "PAGE_ABOUT"
+    "action": "APP_ROUTE_ABOUT"
   }
 ]

@@ -5,14 +5,10 @@ function defaultActions(){
     DEF_INIT: function(data){
       !this.SERVER && this.DEV && this.act('DEF_DEV_TICKER', 2000);
       
-      // console.log('ACTION_APP_INIT', 'v' + this.VER);
-      // this.store('app').set({ version: this.VER });
-      // return this.act('GET_ALL_CONTENT', { url })
       return Promise.resolve(this.store('def').set(data));
     },
     
     DEF_DEV_TICKER: function(delay){
-      console.log('init ticker');
       setInterval(intervalFn, delay || 2000);
       
       function intervalFn(){
@@ -21,30 +17,48 @@ function defaultActions(){
       }
     },
     
-    APP_INIT: function(){
-      return Promise.resolve('APP_INIT');
-    },
-    
-    APP_SET_ROUTE: function(route, req){
+    DEF_SET_ROUTE: function({ route, req }){
       
-      const state = this.store('def').set('STORE_ROUTE_ATTR', {
+      const state = this.store('def').set('STORE_ROUTE', {
         route,
         query:    req.query,
         cookies:  req.cookies.get(),
         params:   req.params
       });
-      this.trigger('APP_SET_ROUTE', state.params);
-      return Promise.resolve('loaded');
+      return Promise.resolve(state);
     },
     
-    APP_ROUTE: function(req, res){
-      console.log('ACTION_APP_ROUTE', req.params, req.query, req.cookies.get());
+    DEF_RESTATE: function(){
+      const actions = this.store('def').get('actions');
+      return this.utils.restateView(actions);
+    },
+    
+    DEF_REMOVE_COOKIE: function(name){
+      window.Cookies && window.Cookies.remove(name);
+      const state = this.store('def').set('REMOVE_COOKIE', name);
+      return Promise.resolve(state);
+    },
+    
+    DEF_SET_COOKIE: function(cookies, opts = {}){
+      if(!window.Cookies) return;
+      Object.keys(cookies).forEach( name => window.Cookies.set(name, cookies[name], opts) );
+    },
+    
+    DEF_REDIRECT: function(route){
+      window.page(route);
+    },
+    
+    APP_INIT: function(){
+      return Promise.resolve('APP_INIT');
+    },
+    
+    APP_ROUTE: function(){
       //this.act('SET_COIN', { symbol: req.params.page });
       return Promise.resolve('loaded');
     },
     
     
-    PAGE_ABOUT: function(req, res){
+    PAGE_ABOUT: function(){
       console.log('page');
       return Promise.resolve('loaded');
     }

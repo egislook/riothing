@@ -49,6 +49,7 @@ let CFG = {
   DEF_STORE_NAME:         'def',
   // action names
   INIT_DEF_ACTION_NAME:   'DEF_INIT',
+  DEF_ROUTE_ACTION_NAME:  'DEF_SET_ROUTE',
   INIT_ACTION_NAME:       'APP_INIT',
   INIT_DATA_ACTION_NAME:  'APP_INIT_DATA',
   EXTERNAL_ACTION_NAME:   'APP_EXTERNAL',
@@ -253,12 +254,14 @@ utils.compileRoot = (pub, file, def) => {
 }
 
 utils.compileAndMerge = (pub, dir, def) => {
-  return utils.compileWithDefaults(pub, dir, def).then( mds => mds.reduce( (obj, item) => {
-    if(obj[item.name] && obj[item.name].constructor === Array){
-      obj[item.name] = obj[item.name].concat(item.data[item.name]).reduce( (arr, item, i, all) => {
+  return utils.compileWithDefaults(pub, dir, def, false, true).then( mds => mds.reduce( (obj, item) => {
+    const value = obj[item.name];
+    if(value && value.constructor === Array){
+      obj[item.name] = value.concat(item.data[item.name]).reduce( (arr, item) => {
         item.route && !arr.find( el => el.route === item.route ) && arr.push(item);
         return arr;
       }, []);
+      
       return obj;
     }
       
@@ -266,7 +269,7 @@ utils.compileAndMerge = (pub, dir, def) => {
   }, {} ));
 }
 
-utils.compileWithDefaults = (pub, dir, def, views) => {
+utils.compileWithDefaults = (pub, dir, def, isViews, isPubFirst) => {
   var links = [ 
     { path: def, type: 'default' }, 
     { path: pub } 
@@ -274,9 +277,11 @@ utils.compileWithDefaults = (pub, dir, def, views) => {
     if(fs.existsSync(path + dir))
       return true;
     utils.message('missing directory ' + dir + ' in ' + path);
-  })
+  });
   
-  return Promise.all( links.map( link => utils.getFiles(link.path, dir, views, link.type) ) )
+  links = isPubFirst ? links.reverse() : links;
+  
+  return Promise.all( links.map( link => utils.getFiles(link.path, dir, isViews, link.type) ) )
     .then( ([ defFiles, pubFiles ]) => defFiles.concat(pubFiles || []) )
 }
 
@@ -299,7 +304,7 @@ utils.toBase64 = (str) =>
 utils.message = msg => console.warn('[RIOTHING]', msg);
 
 utils.getScript = (
-  { INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV, INIT_DEF_ACTION_NAME, DEF_STORE_NAME }, 
+  { INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV, INIT_DEF_ACTION_NAME, DEF_STORE_NAME, DEF_ROUTE_ACTION_NAME }, 
   { actions, stores, defaults }
 ) => {
   let client = [];
@@ -324,13 +329,12 @@ utils.getScript = (
           req.cookies = Cookies;
           next();
         });
-        riothing.store('${DEF_STORE_NAME}').get('routes').forEach(route => 
-          page(route.route, (req, next) => {
-            riothing.action('APP_SET_ROUTE')(route, req);
-            riothing.action(route.action)(req);
-          }));
+        const routes = riothing.store('${DEF_STORE_NAME}').get('routes');
+        routes.forEach( ({ route, method, actions }) => page(route, req => {
+          riothing.action('${DEF_ROUTE_ACTION_NAME}')({ route, req })
+            .then( () => riothing.act('DEF_RESTATE'));
+        }));
         page.start();
-        riot.mount('${TAG_NAME}');
       });
   `);
 
@@ -338,8 +342,8 @@ utils.getScript = (
 }
 
 
-utils.renderHTML = (opts, tagName = 'html') => {
-  opts = opts || Object.assign({}, CLIENT, CFG);
+utils.renderHTML = (state, tagName = 'html') => {
+  const opts = Object.assign({ state }, CLIENT, CFG);
   
   let html =  (`
     <!DOCTYPE html>
@@ -347,7 +351,7 @@ utils.renderHTML = (opts, tagName = 'html') => {
   `);
   
   // includes data
-  if(opts.DATA) 
+  if(opts.DATA)
     html = html.replace('</head>', `<script> window.DATA = ${JSON.stringify(opts.DATA)} </script></head>`)
   return html;
 }
@@ -362,24 +366,25 @@ utils.cookies = (req, res, next) => {
 }
 
 utils.router = (data, riothing) => {
+  app.response.render = utils.renderHTML;
   /** TODO!!!
-      1. action chain ability
       2. action as function ability
       3. convert to separate express routers instead of using * dircetly on app
           "this would give us ability to mount multiple riothing apps with different routes"
   **/
-  app.response.render = utils.renderHTML;
-  riothing.store(CFG.DEF_STORE_NAME).get('routes').forEach(route =>
-    route.route && app[route.method || 'get'](route.route || '/', [
+  const routes = riothing.store(CFG.DEF_STORE_NAME).get('routes');
+  routes.forEach( ({ route, method, actions }) =>
+    route && app[method || 'get'](route || '/', [
       utils.cookies,
+      (req, res, next) => { riothing.restate(); return next() },
       (req, res, next) => {
+        riothing.action(CFG.DEF_ROUTE_ACTION_NAME)({ route, req });
         
-        riothing.restate();
-        riothing.action('APP_SET_ROUTE')(route, req);
-        //riothing.store(CFG.DEF_STORE_NAME).action('STORE_SET_ROUTE')(route, req);
-        return next();
-      },
-      (req, res, next) => riothing.action(route.action)(req, res).then( msg => utils.render(req, res) )
+        actions = typeof actions === 'string' ? [actions] : actions;
+        
+        riothing.utils.promiseChain(actions.map( action => riothing.action(action) ))
+          .then( data => res.send(res.render(data)) );
+      }
     ])
   );
   return riothing;

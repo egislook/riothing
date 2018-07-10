@@ -4,7 +4,7 @@ function Riothing(cfg){
   const ENV    = this.ENV    = cfg.ENV;
   const DEV    = this.DEV    = true;
 
-  this.utils = new RiothingUtils();
+  this.utils = new RiothingUtils(this);
 
   riot.observable(this);
 
@@ -20,9 +20,11 @@ function Riothing(cfg){
     || function(){ console.warn(actionName + ' action does not exist')};
     
   this.act    = (actionName, payload, cb) => {
-    console.log('[RIOTHING]', actionName, !this.actions[actionName] && 'missing action' || 'action triggered');
-    return this.actions[actionName] && this.actions[actionName](payload, cb) 
-      || Promise.resolve( function(){ console.log('missing action ' + actionName)} );
+    const action = this.actions[actionName];
+    this.utils.log('act', actionName, !action && 'missing' || '');
+    return action 
+      ? this.actions[actionName](payload, cb) 
+      : Promise.resolve('missing action ' + actionName);
   }
   
   this.restate = () => this.storeNames.forEach( storeName => this.store(storeName).restate() )
@@ -76,7 +78,7 @@ function Riothing(cfg){
   }
 
   function riothingMixin(self){
-    console.log('[RIOTHING] initialise mixin');
+    self.utils.log('init mixin');
     return {
       init: function(){
         this.store  = self.store;
@@ -84,28 +86,101 @@ function Riothing(cfg){
         this.act    = self.act;
         this.track  = self.track;
         this.utils  = self.utils;
+        this.log    = self.utils.log;
         this.SERVER = self.SERVER;
         this.CLIENT = self.CLIENT;
         this.DEV    = self.DEV;
+        this.init   = this.initiate;
+        
+        this.initState(this.opts.state);
+        this.on('update', () => this.log('update', this.root.localName));
+      },
+      
+      initState: function(initState){
+        this.shouldUpdate = (data, newOpts) => {
+          if(this.utils.equal(newOpts, this.opts) && !data)
+            return false;
+          newOpts && newOpts.state && Object.assign(this, newOpts, { state: newOpts.state });
+          return true;
+        }
+        if(!initState) return;
+        Object.assign(this, initState, { state: initState });
+      },
+      
+      setState: function(state){
+        this.update(Object.assign(state, { state }));
+      },
+      
+      initiate: function(fn){
+        let state = fn(self.stores);
+        
+        Object.keys(state).forEach( key => this[key] = state[key] );
+        
+        self.storeNames.forEach( storeName => 
+          self.track(storeName, changed => {
+            state = fn(self.stores);
+            const keys = self.utils.getKeys(changed);
+            
+            state = Object.keys(state).reduce( (obj, key) => 
+              ~keys.indexOf(key) ? Object.assign(obj, { [key]: state[key] }) : obj
+            , {});
+            
+            console.log(changed, state);
+            
+            Object.keys(state).length && this.update(state); 
+          })
+        )
+      },
+        
+      auto: function(storeName, paramNames){
+        paramNames = typeof paramNames === 'string' && [ paramNames ] || paramNames;
+        paramNames.forEach( paramName => this[paramName] = self.store(storeName).get(paramName) );
+        
+        self.track(storeName, state => {
+          const fits = Object.keys(state).filter( key => paramNames.includes(key) );
+          if(!fits.length)
+            return;
+            
+          const reduced = fits.reduce( (obj, fit) => {
+            obj[fit] = state[fit];
+            return obj;
+          }, {} );
+          
+          console.log('Update triggering', storeName, fits);
+          this.update(reduced);
+        })
       }
     }
   }
 
   function riothingStore(name, { state, model }, self){
-
+    
+    //riot.observable(this);
     this.name         = name;
     this.model        = model || {};
     this.state        = state || {};
-    //this.trigger      = self.trigger;
+    this.trigger      = self.trigger;
     
     /** Pimp the model */
     if(!this.model.prototype.set)
-      this.model.prototype.set = data => 
-        Object.keys(data).forEach( key => this.state[key] ? this.state[key] = data[key] : null ) && this.state;
+      this.model.prototype.set = (data, allow) => {
+        const changed = Object.keys(data).reduce( (obj, key) => {
+          if(this.state[key] || allow){
+            this.state[key] = data[key];
+            obj[key] = data[key];
+          }
+          return obj;
+        }, {});
+        
+        this.trigger(name, changed);
+        return changed;
+      }
 
     this.get = (key) => key
       ? key.split('.').reduce((o,i) => o[i], this.state)
       : this.state;
+    
+    //this.getter = (key) => 
 
     /** now u can set using setter function inside the state */
     this.set = (data, obj) => {
@@ -114,7 +189,15 @@ function Riothing(cfg){
       if(typeof data === 'object')
         return this.state.set(data);
       
-      return this.setter(data) && this.setter(data)(obj);
+      if(!this.setter(data))
+        return;
+      
+      const val = this.setter(data)(obj);
+      const state = this.state.set(val, true);
+      //this.trigger(data, state);
+      return state;
+        
+      //return this.setter(data) && this.setter(data)(obj) && this.state.set();
       
       
       //triggerName && self.trigger(triggerName, this.state);
@@ -128,17 +211,19 @@ function Riothing(cfg){
     }
   }
 
-  function RiothingUtils(){
-    const intervals = [
-      { label: 'year',    seconds: 31536000 },
-      { label: 'month',   seconds: 2592000 },
-      { label: 'day',     seconds: 86400 },
-      { label: 'hour',    seconds: 3600 },
-      { label: 'minute',  seconds: 60 },
-      { label: 'second',  seconds: 0 }
-    ];
+  function RiothingUtils(self){
 
     this.ago = (timestamp = 0, end = 'ago', multiple = 's') => {
+      
+      const intervals = [
+        { label: 'year',    seconds: 31536000 },
+        { label: 'month',   seconds: 2592000 },
+        { label: 'day',     seconds: 86400 },
+        { label: 'hour',    seconds: 3600 },
+        { label: 'minute',  seconds: 60 },
+        { label: 'second',  seconds: 0 }
+      ];
+      
       timestamp = new Date(timestamp).getTime();
       const seconds   = Math.floor((Date.now() - timestamp) / 1000);
       const interval  = intervals.find(i => i.seconds < seconds);
@@ -206,7 +291,7 @@ function Riothing(cfg){
         switch(data.type){
           
           case 'init_success':
-            console.log('[RIOTHING]', 'Socket Connected');
+            this.log('socket connected');
             queries.forEach( (query, id) => webSocket.send(JSON.stringify({
               id,
               type: 'subscription_start',
@@ -247,7 +332,48 @@ function Riothing(cfg){
       
       return Object.assign(output, deep(obj));
     }
-
+    
+    this.getKeys = (o, keys = []) => {
+      if(o && o.constructor !== Object)
+        return;
+      
+      Object.keys(o).forEach( k => {
+        keys.push(k);
+        o[k] && this.getKeys(o[k], keys); 
+      });
+      
+      return keys;
+    }
+    
+    this.promiseChain = (promises, data = {} ) => 
+      promises.reduce( (promise, fn) =>
+        promise.then( obj => fn(obj).then( res => Object.assign(obj, res) )),
+        Promise.resolve(data)
+      )
+    
+    this.restateView = (actions, tagName = 'tag-app') => {
+      actions = typeof action === 'string' ? [actions] : actions;
+      return this.promiseChain(actions.map( action => self.action(action) ))
+        .then( state => {
+          const tag = window.document.querySelector(tagName)._tag;
+          tag ? tag.setState(state) : riot.mount(tagName, { state });
+          return state;
+        })
+    }
+    
+    this.log = function(){
+      if(!DEV) return;
+      let msg = Object.keys(arguments).map( key => arguments[key]);
+      msg.unshift('[RT]');
+      console.log.apply(null, msg);
+    }
+    
+    this.equal = function(o1, o2){
+      try { return JSON.stringify(o1) === JSON.stringify(o2) }
+      catch(e) { return false }
+      return false;
+    }
+        
     return this;
   }
 }

@@ -1,14 +1,22 @@
 <def-button>
   <a href={opts.href}
-    onclick={opts.onclick} 
+    onclick={handleClick} 
     class={
       'w:100pc': opts.full,
-      'p:12px-24px bs:1 bd-w:1px bd-c:sec br:2px hv-bs:2 hv-gs:10pc ts:all': true,
+      'p:12px-24px bd-w:1px bd-c:sec br:2px bs:2 hv-bs:1 hv-gs:10pc ts:all m-l:5px': true,
       'bg:sec c:white': !opts.bordered,
       'bg:ts c:sec': opts.bordered,
     }>
-      {opts.text}
+      {opts.text || 'button'}
   </a>
+  <script>
+    this.handeClick = (e) => {
+      e.preventUpdate = true;
+      e.preventDefault();
+      e.stopPropagation();
+      opts.onclick(e);
+    }
+  </script>
 </def-button>
 
 <def-fog>
@@ -41,10 +49,13 @@
 
     <div class="h:100pc" if={opts.page}>
       <a href="/" class="fs:140pc c:black200 fu-arrow-right p:20px-30px md-t,l:0 md-ps:ab mdx-ps:fx mdx-b,r:0 bg:white" />
-
-      <div class="dp:flx p:25px ai:c h:100pc" data-is={'page-' + opts.page} />
+      
+      <div if={false} class="dp:flx p:25px ai:c h:100pc">
+        <yield/>
+      </div>
+      
+      <div class="dp:flx p:25px ai:c h:100pc" state={opts.state} data-is={opts.view || 'page-' + opts.page} />
       
     </div>
-
-</div>
+  </div>
 </def-splash>
