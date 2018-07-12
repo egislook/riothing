@@ -1,7 +1,8 @@
 <html lang="en">
 	<head>
 	  <meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+		<meta if={false} http-equiv="Content-Security-Policy" content="default-src 'self'; font-src 'self' data: fonts.gstatic.com;" />
 		<!-- for Google -->
 		<meta name="description" content={ meta.description } />
 		<meta name="author" content={ meta.author } />
@@ -22,6 +23,7 @@
 		<link rel="icon" type="image/x-icon" href={ meta.favicon } />
 		<!-- stylesheets -->
 		<link if={STYLES} each={style in STYLES} href={style} rel="stylesheet" />
+		<link if={FONTS} each={font in FONTS} font-src={font} href={font} rel="stylesheet" />
 		<link if={SERV_STYLE} rel="stylesheet" href="/style.css" />
 		<!-- prefetch -->
 		<link if={PREFETCH} each={file in PREFETCH} href={file} />
@@ -30,7 +32,7 @@
 		<!-- includes window.DATA here -->
 	</head>
 
-	<body class="ff:Questrial prim:#ff7854 sec:#fd267d err:red600 warn:yellow ok:green txt:black300 c:txt fw:300 fs:15px md-fs:16px lh:1.3 bg:f1f1f1">
+	<body class="ff:Roboto prim:#300D4F sec:#10d078 err:red600 warn:yellow ok:green txt:black300 c:txt fw:300 fs:15px md-fs:16px lh:1.3 bg:f1f1f1">
     <tag-app state={state}></tag-app>
 		<!-- js libraries -->
 		 <!--<script if={!SERV_STYLE} type="text/javascript" src="./packs/fucss/fucss.min.js" defer></script> -->
@@ -65,8 +67,10 @@
 			    //'https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.2/lodash.min.js',
 			  ],
 			  STYLES: [
-			  	'https://cdn.rawgit.com/noneedsystem/fuico/0.0.8/style.css',
-			  	'https://fonts.googleapis.com/css?family=Questrial'
+			  	'https://cdn.rawgit.com/noneedsystem/fuico/0.0.8/style.css'
+			  ],
+			  FONTS: [
+			  	'https://fonts.googleapis.com/css?family=Roboto:100,300,400'
 			  ],
 			  PREFETCH: [
 			  	//'/content.json',

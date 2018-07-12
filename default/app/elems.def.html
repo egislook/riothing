@@ -1,13 +1,16 @@
 <def-button>
   <a href={opts.href}
     onclick={handleClick} 
-    class={
+    class="{opts.class} {
       'w:100pc': opts.full,
-      'p:12px-24px bd-w:1px bd-c:sec br:2px bs:2 hv-bs:1 hv-gs:10pc ts:all m-l:5px': true,
-      'bg:sec c:white': !opts.bordered,
-      'bg:ts c:sec': opts.bordered,
-    }>
-      {opts.text || 'button'}
+      'm-l:7px': !opts.full,
+      'p:10px-24px bd-w:1px br:2px bs:3 hv-bs:1 hv-gs:10pc ts:all fs:90pc fw:600 ls:2px ws:np': true,
+      'bg:sec c:white bd-c:sec': !opts.bordered && !opts.white,
+      'bg:ts c:sec bd-c:sec': opts.bordered && !opts.white,
+      'bg:white bd-c:sec c:sec': opts.white,
+    }">
+      <yield />
+      {opts.text}
   </a>
   <script>
     this.handeClick = (e) => {
@@ -20,7 +23,7 @@
 </def-button>
 
 <def-fog>
-  <div onclick={opts.onclick} class="w:100pc h:100pc bg:whitea6 ps:ab t,l:0 dp:flx ai:c jc:c z:20">
+  <div onclick={opts.onclick} class="w:100pc h:100pc bg:whitea6 t,l:0 dp:flx ai:c jc:c z:20 {'ps:ab': !opts.fixed, 'ps:fx': opts.fixed}">
     <span if={opts.loading} class="br:100pc w,h:40px bg-c:sec an:scaler-1s-inf-eio" />
     <span if={opts.error} class="w:auto bd:1px-sld-red p:12px-24px m:10px mnw:200px bg:white br:2px bs:1px ta:l">
       <h2 class="m:12px-0">Error</h2>
@@ -59,3 +62,23 @@
     </div>
   </div>
 </def-splash>
+
+<def-input>
+  <div>
+    <input />
+  </div>
+</def-input>
+
+<def-wrap style="width: 100%">
+  <div class="mxw:1100px w:100pc {opts.class} p-rl:3pc">
+    <yield />
+  </div>
+  <script>
+    Object.keys(this.parent).forEach( key => {
+      if(!this[key])
+        this[key] = this.parent[key];
+    });
+    Object.assign(this.opts, this.parent.opts);
+    this.shouldUpdate = (data, newOpts) => Object.assign(this.opts, this.parent.opts)
+  </script>
+</def-wrap>

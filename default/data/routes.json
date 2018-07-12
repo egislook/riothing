@@ -1,10 +1,12 @@
 [
   {
-    "route":  "/:page?/:id?",
-    "action": "APP_ROUTE"
+    "route":  "/wtf",
+    "actions": "APP_ROUTE"
   },
   {
-    "route": "/about",
-    "action": "APP_ROUTE_ABOUT"
+    "route": "*",
+    "view": "page-error",
+    "splash": true,
+    "actions": "APP_ROUTE"
   }
 ]

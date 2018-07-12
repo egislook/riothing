@@ -27,7 +27,12 @@ function Riothing(cfg){
       : Promise.resolve('missing action ' + actionName);
   }
   
-  this.restate = () => this.storeNames.forEach( storeName => this.store(storeName).restate() )
+  this.restate = data => this.storeNames.forEach( storeName => this.store(storeName).restate(data) );
+  
+  this.extract = combine => this.storeNames.reduce( (obj, storeName) => {
+      const state = this.utils.cloneObject(this.store(storeName).get(), true);
+      return Object.assign(obj, combine ? { [storeName]: state } : state )
+    }, {});
 
   this.track = this.on;
 
@@ -192,20 +197,15 @@ function Riothing(cfg){
       if(!this.setter(data))
         return;
       
-      const val = this.setter(data)(obj);
+      const val   = this.setter(data)(obj);
       const state = this.state.set(val, true);
-      //this.trigger(data, state);
+      //console.log(val, state);
       return state;
-        
-      //return this.setter(data) && this.setter(data)(obj) && this.state.set();
-      
-      
-      //triggerName && self.trigger(triggerName, this.state);
     }
     
     this.setter = setterName => typeof this.state[setterName] === 'function' && this.state[setterName];
 
-    this.restate = (data) => {
+    this.restate = data => {
       this.state = this.model && new this.model(data || this.state);
       return this.get();
     }
@@ -251,8 +251,8 @@ function Riothing(cfg){
       return fetch('https://api.graph.cool/simple/v1/' + GQ, {
         method: 'POST',
         headers: { 
-          'content-type': 'application/json',
-          'authorization': `Bearer ${token}`
+          'content-type':   'application/json',
+          'authorization':  `Bearer ${token}`
         },
         body: JSON.stringify({ query, variables })
       })
@@ -260,7 +260,8 @@ function Riothing(cfg){
       .then( json => {
         if(json.errors){
           const error = json.errors.shift();
-          throw error.functionError
+            
+          throw error.functionError || error.message || error;
         }
         return json.data 
       })
@@ -268,7 +269,10 @@ function Riothing(cfg){
         const keys = Object.keys(data);
         return keys.length && data[keys.shift()];
       })
-      .catch( error => ({ error }) )
+      .catch( error => {
+        console.warn(error);
+        return { error };
+      })
     }
     
     this.gqlWs = ({ GQ, token, queries = [], action }) => {
@@ -318,8 +322,11 @@ function Riothing(cfg){
       return webSocket;
     }
     
-    this.cloneObject = obj => {
+    this.cloneObject = (obj, noneDeep) => {
       let output = JSON.parse(JSON.stringify(obj));
+      
+      if(noneDeep)
+        return output;
       
       function deep(o){
         let key, out = {};
@@ -345,14 +352,18 @@ function Riothing(cfg){
       return keys;
     }
     
-    this.promiseChain = (promises, data = {} ) => 
-      promises.reduce( (promise, fn) =>
+    this.promiseChain = (promises, data = {} ) => {
+      if(!promises.length)
+        return Promise.resolve(data);
+      return promises.reduce( (promise, fn) =>
         promise.then( obj => fn(obj).then( res => Object.assign(obj, res) )),
         Promise.resolve(data)
       )
+    }
     
     this.restateView = (actions, tagName = 'tag-app') => {
-      actions = typeof action === 'string' ? [actions] : actions;
+      actions = actions || [];
+      actions = typeof actions === 'string' ? [actions] : actions;
       return this.promiseChain(actions.map( action => self.action(action) ))
         .then( state => {
           const tag = window.document.querySelector(tagName)._tag;

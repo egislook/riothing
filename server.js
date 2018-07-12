@@ -19,6 +19,11 @@ const CLIENT = {
   DATA:     false
 };
 
+const SERVER = {
+  ACTIONS: [],
+  STORES:  [],
+};
+
 let CFG = {
   // server
   PORT:       process.env.PORT     || 8080,
@@ -55,10 +60,11 @@ let CFG = {
   EXTERNAL_ACTION_NAME:   'APP_EXTERNAL',
 };
 
-let riothing, Riothing;
+let Riothing;
 
 function Setup(cfg){
-  CFG = utils.configure(cfg);
+  CFG       = utils.configure(cfg);
+  Riothing  = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
   
   // collects all actions, stores and views including defaults
   return Promise.all([
@@ -72,42 +78,44 @@ function Setup(cfg){
     CLIENT.STORES   = stores.filter(md => md.type !== 'default').map(md   => md.client);
     CLIENT.VIEWS    = views.filter(md => md.type !== 'default').map(md    => md.client);
     // returns the function names and extras to execute on client and server including routes
+    SERVER.ACTIONS  = actions.slice().map(md => md.name);
+    SERVER.STORES   = stores.slice().map(md => md.name);
+    
     return {
-      actions:  actions.slice().map(md => md.name),
-      stores:   stores.slice().map(md => md.name),
-      defaults:   [
+      defaults: [
         actions.filter(md => md.type === 'default').map(md => md.code).join(),
         stores.filter(md => md.type === 'default').map(md => md.code).join(),
         views.filter(md => md.type === 'default').map(md => md.code).join('\n')
       ]
     };
   })
-  .then(({ actions, stores, defaults }) => {
-    //style compilation missing
+  .then(({ defaults }) => {
+    // style compilation missing
     // compiles and converts client initial function to script string
-    CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { actions, stores, defaults });
+    CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { 
+      actions: SERVER.ACTIONS, 
+      stores: SERVER.STORES, 
+      defaults 
+    });
     
     // compiles root file
     utils.compileRoot(CFG.PUB_DIR, CFG.ROOT_FILE, CFG.DEF_DIR);
-    
-    // init riothing
-    Riothing = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
-    riothing = new Riothing({ actions, stores, ENV: CFG.ENV });
-    
-    return riothing;
+    return;
   })
-  .then( riothing => 
-    utils.compileAndMerge(CFG.PUB_DIR, CFG.DATA_DIR, CFG.DEF_DIR).then( data => ({
-      riothing,
-      data: Object.assign(data, { ENV: CFG.ENV }),
-    }))
+  .then( () => 
+    utils.compileAndMerge(CFG.PUB_DIR, CFG.DATA_DIR, CFG.DEF_DIR)
+      .then( data => Object.assign(data, { ENV: CFG.ENV }) )
   )
-  .then( ({ riothing, data }) => {
+  .then( data => {
     // Init client data
     CLIENT.DATA = data;
     // Init Riothing
+    const riothing = new Riothing({ 
+      actions:  SERVER.ACTIONS, 
+      stores:   SERVER.STORES, 
+      ENV:      CFG.ENV 
+    });
     
-    // Acts on init action and initiates router
     return riothing.act(CFG.INIT_DEF_ACTION_NAME, data)
       .then( data => riothing.act(CFG.INIT_ACTION_NAME, data))
       .then( data => utils.router(data, riothing))
@@ -322,6 +330,7 @@ utils.getScript = (
       stores:   ${JSON.stringify(stores)},
       ENV:      ${JSON.stringify(ENV)},
     });
+    riot.settings.autoUpdate = false;
     riothing.act('${INIT_DEF_ACTION_NAME}', window.DATA)
       .then(data => riothing.act('${INIT_ACTION_NAME}', data))
       .then(content => {
@@ -372,18 +381,30 @@ utils.router = (data, riothing) => {
       3. convert to separate express routers instead of using * dircetly on app
           "this would give us ability to mount multiple riothing apps with different routes"
   **/
-  const routes = riothing.store(CFG.DEF_STORE_NAME).get('routes');
+  
+  const extracted = riothing.extract();
+  const routes    = riothing.store(CFG.DEF_STORE_NAME).get('routes');
+  
   routes.forEach( ({ route, method, actions }) =>
     route && app[method || 'get'](route || '/', [
       utils.cookies,
-      (req, res, next) => { riothing.restate(); return next() },
+      //(req, res, next) => { riothing.restate(); return next() },
       (req, res, next) => {
-        riothing.action(CFG.DEF_ROUTE_ACTION_NAME)({ route, req });
         
+        req.riothing = new Riothing({ 
+          actions:  SERVER.ACTIONS, 
+          stores:   SERVER.STORES, 
+          ENV:      CFG.ENV 
+        });
+        
+        req.riothing.restate(extracted);
+        
+        req.riothing.action(CFG.DEF_ROUTE_ACTION_NAME)({ route, req });
+        actions = actions || [];
         actions = typeof actions === 'string' ? [actions] : actions;
-        
-        riothing.utils.promiseChain(actions.map( action => riothing.action(action) ))
-          .then( data => res.send(res.render(data)) );
+        req.riothing.utils.promiseChain(actions.map( action => req.riothing.action(action) ))
+          .then( data => res.send(res.render(data)) )
+          .catch( err => console.log('stuff', err) );
       }
     ])
   );
