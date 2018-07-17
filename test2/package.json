@@ -1,0 +1,25 @@
+{
+  "name": "riothing-test-2",
+  "version": "0.0.1",
+  "description": "riot & node tag compiling, rendering and routing functions",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "watch": "export NODE_ENV=development|| set NODE_ENV=development&& nodemon -e html,js,json --watch ../../ index.js"
+  },
+  "keywords": [
+    "html5",
+    "poinout",
+    "riot",
+    "node"
+  ],
+  "author": "noneedsystem",
+  "license": "MIT",
+  "dependencies": {
+    "riothing": "^0.2.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noneedsystem/riothing.git"
+  }
+}
