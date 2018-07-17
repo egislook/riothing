@@ -402,7 +402,7 @@ function Riothing(cfg){
       return this.promiseChain(actions.map( action => self.action(action) ))
         .then( state => {
           const tag = window.document.querySelector(tagName)._tag;
-          tag ? tag.setState(state) : riot.mount(tagName, { state });
+          tag && tag.setState ? tag.setState(state) : riot.mount(tagName, { state });
           return state;
         })
     }

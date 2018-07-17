@@ -144,7 +144,8 @@ module.exports.server = (cfg) => {
     DEV: cfg.env  || process.env.NODE_ENV === 'development',
     URL: cfg.url  || process.env.URL || `https://${CFG.IP}:${CFG.PORT}`,
     VER: cfg.ver  || process.env.npm_package_version,
-    GQ:  cfg.gq
+    GQ:  cfg.gq,
+    FETCHER: cfg.fetcher,
   };
   
   utils.configure(cfg, ENV);

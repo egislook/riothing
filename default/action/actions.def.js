@@ -4,7 +4,24 @@ function defaultActions(){
 
     DEF_INIT: function(data){
       !this.SERVER && this.DEV && this.act('DEF_DEV_TICKER', 2000);
-      return Promise.resolve(this.store('def').set(data));
+      if(!data.ENV.FETCHER || this.CLIENT)
+         return Promise.resolve(this.store('def').set(data));
+      
+      return this.act('DEF_FETCHER', data.ENV.FETCHER)
+        .then( fetcherData => {
+          return Promise.resolve(this.store('def').set(Object.assign(data, fetcherData)));
+        })
+     
+    },
+    
+    DEF_FETCHER: function(fetcher){
+      
+      return Promise.all( 
+        fetcher.map(link => fetch(link.url)
+          .then( res => res.json() )
+          .then( data => Object.assign(link, { data: link.limit ? data.slice(0, link.limit) : data }))) 
+      )
+      .then( results => results.reduce( (obj, item) => Object.assign(obj, { [item.name]: item.data })  , {}));
     },
     
     DEF_DEV_TICKER: function(delay){
