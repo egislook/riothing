@@ -7,11 +7,13 @@ function defaultStore(initState){
     model:      StateDef,
   };
   
-  function StateDef({ routes, ENV }, prev = {}){
+  function StateDef(data = {}, prev = {}){
     
-    this.routes   = routes;
-    this.url      = ENV && ENV.URL;
-    this.version  = ENV && ENV.VER;
+    Object.assign(this, data);
+    
+    this.routes   = data.routes;
+    this.url      = data.ENV && data.ENV.URL;
+    this.version  = data.ENV && data.ENV.VER;
       
     //this['STORE_ROUTE_ATTR'] = data => this.set(data, true);
     this['STORE_ROUTE']   = data => new Route(data, this.routes.find( r => r.route === data.route ) || {});

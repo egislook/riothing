@@ -8,7 +8,7 @@ const Module    = require('module');
 const path      = require('path');
 const fetch     = global.fetch = require('node-fetch');
 const cookie    = require('cookie');
-const fucss     = require('fucss');
+const fucss     = require('../fucss/fucss.js'); //require('fucss') || 
 
 const CLIENT = {
   VIEWS:    [],
@@ -178,7 +178,7 @@ module.exports.server = (cfg) => {
       
       if(ENV.DEV) return;
       app.listen(CFG.PORT, () => utils.message('started production ' + ENV.URL));
-      riothing.act(CFG.EXTERNAL_ACTION_NAME);
+      //riothing.act(CFG.EXTERNAL_ACTION_NAME);
     });
 }
 
@@ -400,7 +400,7 @@ utils.router = (data, riothing) => {
         req.riothing.restate(extracted);
         
         req.riothing.action(CFG.DEF_ROUTE_ACTION_NAME)({ route, req });
-        actions = actions || [];
+        actions = actions || ['APP_ROUTE'];
         actions = typeof actions === 'string' ? [actions] : actions;
         req.riothing.utils.promiseChain(actions.map( action => req.riothing.action(action) ))
           .then( data => res.send(res.render(data)) )

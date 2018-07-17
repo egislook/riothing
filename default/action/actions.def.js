@@ -4,7 +4,6 @@ function defaultActions(){
 
     DEF_INIT: function(data){
       !this.SERVER && this.DEV && this.act('DEF_DEV_TICKER', 2000);
-      
       return Promise.resolve(this.store('def').set(data));
     },
     
@@ -18,7 +17,6 @@ function defaultActions(){
     },
     
     DEF_SET_ROUTE: function({ route, req }){
-      
       const state = this.store('def').set('STORE_ROUTE', {
         route,
         query:    req.query,
@@ -53,14 +51,7 @@ function defaultActions(){
     },
     
     APP_ROUTE: function(){
-      //this.act('SET_COIN', { symbol: req.params.page });
-      return Promise.resolve('loaded');
+      return Promise.resolve(this.store('def').get());
     },
-    
-    
-    PAGE_ABOUT: function(){
-      console.log('page');
-      return Promise.resolve('loaded');
-    }
   }
 }

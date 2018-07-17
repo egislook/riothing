@@ -1,12 +1,11 @@
 [
   {
-    "route":  "/wtf",
-    "actions": "APP_ROUTE"
+    "route":  "/",
   },
   {
     "route": "*",
     "view": "page-error",
-    "splash": true,
-    "actions": "APP_ROUTE"
+    "splash": false,
+    "plain": true
   }
 ]

@@ -2,7 +2,7 @@ function Riothing(cfg){
   const SERVER = this.SERVER = typeof module === 'object';
   const CLIENT = this.CLIENT = !SERVER;
   const ENV    = this.ENV    = cfg.ENV;
-  const DEV    = this.DEV    = true;
+  const DEV    = this.DEV    = cfg.ENV.DEV;
 
   this.utils = new RiothingUtils(this);
 
@@ -42,6 +42,7 @@ function Riothing(cfg){
 
   function init({ actions, stores, data }){
     //init riothing mixin
+    riot.mixin(globalMixin(this));
     riot.mixin('riothing', riothingMixin(this));
     //init actions & stores
     initActions.bind(this)(actions);
@@ -80,6 +81,40 @@ function Riothing(cfg){
       this.stores[store.name] = new riothingStore(store.name, store, this);
       this.storeNames = this.storeNames.concat([ store.name ]);
     });
+  }
+  
+  function globalMixin(self){
+    return {
+      init: function(){
+        this.utils = self.utils;
+        if(this.opts.opts){
+          const opts = Object.assign(this.opts, this.opts.opts);
+          delete this.opts.opts;
+        }
+        
+        this.on('before-unmount', () => {
+      
+          if(typeof window === 'undefined' || !this.opts.classanim)
+            return;
+            
+          const clone       = this.root.cloneNode(true);
+          const parentNode  = this.root.parentNode;
+          
+          parentNode.insertBefore(clone, parentNode.children[0]);
+          
+          animate(clone, parentNode, this.opts.classanim);
+          
+          function animate(clone, parentNode, classname){
+            setTimeout(function(){
+              clone.className += ' ' + classname;
+              console.log(parentNode.children);
+              setTimeout(function(){ parentNode.removeChild(clone) }, 450);
+            }, 1);
+          }
+          
+        })
+      }
+    }
   }
 
   function riothingMixin(self){
@@ -225,7 +260,7 @@ function Riothing(cfg){
       ];
       
       timestamp = new Date(timestamp).getTime();
-      const seconds   = Math.floor((Date.now() - timestamp) / 1000);
+      const seconds   = Math.floor((new Date().getTime() - timestamp) / 1000);
       const interval  = intervals.find(i => i.seconds < seconds);
       const count     = Math.floor(seconds / interval.seconds);
       return `${count} ${interval.label}${count !== 1 && multiple || ''} ${end}`;
@@ -362,7 +397,7 @@ function Riothing(cfg){
     }
     
     this.restateView = (actions, tagName = 'tag-app') => {
-      actions = actions || [];
+      actions = actions || ['APP_ROUTE'];
       actions = typeof actions === 'string' ? [actions] : actions;
       return this.promiseChain(actions.map( action => self.action(action) ))
         .then( state => {
