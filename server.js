@@ -1,5 +1,6 @@
 'use strict';
 
+const DEV       = false;
 const express   = require('express');
 const app       = express();
 const fs        = require('fs');
@@ -8,7 +9,7 @@ const Module    = require('module');
 const path      = require('path');
 const fetch     = global.fetch = require('node-fetch');
 const cookie    = require('cookie');
-const fucss     = require('../fucss/fucss.js'); //require('fucss') || 
+const fucss     = DEV ? require('../fucss/fucss.js') : require('fucss'); 
 
 const CLIENT = {
   VIEWS:    [],
