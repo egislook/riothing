@@ -1,6 +1,6 @@
 'use strict';
 
-const DEV       = true;
+const DEV       = false;
 const express   = require('express');
 const app       = express();
 const fs        = require('fs');
