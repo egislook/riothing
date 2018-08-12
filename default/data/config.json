@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "name":         "Riothing",
+    "title":        "Riothing - painlessly web app framework",
+    "description":	"Riothing makes your life easy by letting you to build riotJs isomporphic or decentralised web app in no time. Quick scalable MVP (minimum viable product) building tool. Full web3 integration supports.",
+    "author": 			"egislook",
+    "url":					"https://github.com/egislook/riothing",
+    "favicon":			"/def/favicon.png",
+    "image":				"/def/cover.jpg",
+  },
+  "classBody": {
+    "prim:#ff7854 tert:yellow600 sec:#fd267d err:red600 warn:yellow ok:green txt:black300": true,
+		"ff:Roboto c:txt fw:300 fs:15px lh:1.1 bg:fafafa md-fs:16px_lh:1.3": true,
+  },
+  "fonts": [
+    "https://fonts.googleapis.com/css?family=Roboto:100,300,400",
+    "https://fonts.googleapis.com/css?family=Montserrat:100,200,300,400,500,600"
+  ]
+}

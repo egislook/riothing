@@ -4,6 +4,6 @@
 // console.log(riothing.renderHTML());
 
 
-const riothing = require('../server.js');
+const riothing = require('../../server.js');
 // const riothing = require('../../_packs/riothing');
 riothing.server();

@@ -1,23 +1,54 @@
 <tag-app>
-  <div class="ts:ft-1s {'blr:1px': SERVER} h:100pc md-dp:flx jc:sb">
-    <nav>
-      <a class="p:10px m:5px bg:prim c:white" each={route in routes} href={route.link || route.name}>{route.name}</a>
-    </nav>
+  
+  <def-fog if={ SERVER && !splash || popup } 
+    loading={ !popup } 
+    fixed={ true }
+    popup={ popup }
+    state={ opts.state } 
+  />
+  
+  <div class="md-ts:all ps:rl {
+    'an:land-1s': SERVER, 
+    'blr:3px': splash, 
+    'of:hd-!': splash,
+    'h:100pc of:auto': false
+  }">
+      
+    <def-nav 
+      classname="ts:all {'try:100npc': page.plain || splash}" 
+      routes={navRoutes} 
+      meta={meta}
+      fixed={true}
+      user={user}
+    />
+    
+    <def-page
+      page={ page }
+      state={ opts.state }
+    />
+    
   </div>
+  
+  <def-splash 
+    splash={ splash } 
+    state={ opts.state }
+    down={ true }
+    dark={ true } 
+  />
 
   <script>
-    this.mixin('riothing');
     
-    this.routes = [
-      {name: 'home', link: '/'},
-      {name: 'about'},
-      {name: 'contacts'}
-    ]
+    this.on('update', init.bind(this)) && init.bind(this)();
     
-    //const { coin, coins } = this.store('coins').get();
-    //this.coin     = coin;
-    //this.coins    = coins;
-    //this.version  = this.store('app').get('version');
-    //this.track('SET_COIN', this.update);
+    function init(data){
+      const { splash, popup, page, navRoutes, meta, user } = this.opts.state;
+      this.splash = splash;
+      this.popup  = popup;
+      this.page   = page;
+      this.navRoutes = navRoutes;
+      this.meta   = meta;
+      this.user   = user;
+    }
+    
   </script>
 </tag-app>

@@ -1,10 +1,13 @@
 function Riothing(cfg){
+  
   const SERVER = this.SERVER = typeof module === 'object';
   const CLIENT = this.CLIENT = !SERVER;
   const ENV    = this.ENV    = cfg.ENV;
   const DEV    = this.DEV    = cfg.ENV.DEV;
 
   this.utils = new RiothingUtils(this);
+  
+  CLIENT && this.utils.initReqAnimFrame();
 
   riot.observable(this);
 
@@ -16,12 +19,16 @@ function Riothing(cfg){
 
 
   this.store  = (storeName)   => this.stores[storeName];
-  this.action = (actionName)  => this.actions[actionName] && this.actions[actionName] 
-    || function(){ console.warn(actionName + ' action does not exist')};
+  this.action = (actionName, data)  => {
+    if(!this.actions[actionName])
+      return (() => console.warn(actionName + ' action does not exist'));
     
-  this.act    = (actionName, payload, cb) => {
+    return data ? e => this.actions[actionName](data, e) : this.actions[actionName];
+  }
+    
+  this.act = (actionName, payload, cb) => {
     const action = this.actions[actionName];
-    this.utils.log('act', actionName, !action && 'missing' || '');
+    actionName !== 'LINK' && this.utils.log('act', actionName, !action && 'missing' || '');
     return action 
       ? this.actions[actionName](payload, cb) 
       : Promise.resolve('missing action ' + actionName);
@@ -86,12 +93,21 @@ function Riothing(cfg){
   function globalMixin(self){
     return {
       init: function(){
-        this.utils = self.utils;
+        
+        this.SERVER = self.SERVER;
+        this.act    = self.act;
+        this.action = self.action;
+        this.utils  = self.utils;
+        
+        
+        // merge opts
         if(this.opts.opts){
-          const opts = Object.assign(this.opts, this.opts.opts);
-          delete this.opts.opts;
+          updateOpts.bind(this)();
+          this.on('update', updateOpts.bind(this));
         }
         
+        
+        // Animation
         this.on('before-unmount', () => {
       
           if(typeof window === 'undefined' || !this.opts.classanim)
@@ -107,12 +123,18 @@ function Riothing(cfg){
           function animate(clone, parentNode, classname){
             setTimeout(function(){
               clone.className += ' ' + classname;
-              console.log(parentNode.children);
+              //console.log(parentNode.children);
               setTimeout(function(){ parentNode.removeChild(clone) }, 450);
             }, 1);
           }
           
         })
+        
+        function updateOpts(){
+          const opts = Object.assign(this.opts, this.opts.opts);
+          delete opts.opts;
+          this.opts = opts;
+        }
       }
     }
   }
@@ -203,16 +225,16 @@ function Riothing(cfg){
     
     /** Pimp the model */
     if(!this.model.prototype.set)
-      this.model.prototype.set = (data, allow) => {
+      this.model.prototype.set = function(data, allow){
         const changed = Object.keys(data).reduce( (obj, key) => {
-          if(this.state[key] || allow){
-            this.state[key] = data[key];
+          if(this[key] || allow){
+            this[key] = data[key];
             obj[key] = data[key];
           }
           return obj;
         }, {});
         
-        this.trigger(name, changed);
+        //this.trigger(name, changed);
         return changed;
       }
 
@@ -249,6 +271,7 @@ function Riothing(cfg){
   function RiothingUtils(self){
 
     this.ago = (timestamp = 0, end = 'ago', multiple = 's') => {
+      timestamp = String(parseInt(timestamp)).length === 10 ? timestamp * 1000 : timestamp;
       
       const intervals = [
         { label: 'year',    seconds: 31536000 },
@@ -256,15 +279,51 @@ function Riothing(cfg){
         { label: 'day',     seconds: 86400 },
         { label: 'hour',    seconds: 3600 },
         { label: 'minute',  seconds: 60 },
-        { label: 'second',  seconds: 0 }
+        { label: 'second',  seconds: 1 }
       ];
       
-      timestamp = new Date(timestamp).getTime();
-      const seconds   = Math.floor((new Date().getTime() - timestamp) / 1000);
-      const interval  = intervals.find(i => i.seconds < seconds);
-      const count     = Math.floor(seconds / interval.seconds);
+      timestamp       = new Date(timestamp).getTime();
+      const ago       = (new Date().getTime() - timestamp);
+      const seconds   = ago > 1000 ? Math.floor(ago / 1000) : 2;
+      const interval  = intervals.find(i => i.seconds < seconds) || intervals[5];
+      const count     = seconds > 1 ? Math.floor(seconds / interval.seconds) : 2;
       return `${count} ${interval.label}${count !== 1 && multiple || ''} ${end}`;
+    };
+    
+    this.date = (timestamp = 0, type = 'date') => {
+      const dt = new Date(timestamp);
+      if(type === 'iso') return dt.toISOString().replace('T', ' ').split(':00.').shift()
+      
+      let d = dt.getDate(); d = d < 10 ? '0' + d : d;
+      let m = dt.getMonth() + 1; m = m < 10 ? '0' + m : m;
+      const y = dt.getFullYear();
+      
+      if(type === 'date') return `${d}/${m}/${y}`;
     }
+    
+    this.timestamp = (ago, timestamp) => {
+      timestamp = timestamp ? new Date(timestamp).getTime() : new Date().getTime();
+      switch(ago){
+        case 'day':   ago = 1; break;
+        case 'week':  ago = 7; break;
+        case 'month': ago = 30; break;
+        case 'year':  ago = 365; break;
+        default: return timestamp;
+      }
+      
+      return new Date(new Date(timestamp).setDate(new Date().getDate() - ago)).getTime()
+    }
+    
+    this.num = (num) => {
+      const defs = [
+        { label: 'B', value: 1000000000 },
+        { label: 'M', value: 1000000 }
+      ];
+      
+      if(num > defs[0].value) return (num / defs[0].value).toFixed(2) + defs[0].label;
+      if(num > defs[1].value) return (num / defs[1].value).toFixed(2) + defs[1].label;
+      return num;
+    };
 
     this.loadExtensionView = () =>
       fetch(chrome.extension.getURL(viewFilePath))
@@ -402,7 +461,7 @@ function Riothing(cfg){
       return this.promiseChain(actions.map( action => self.action(action) ))
         .then( state => {
           const tag = window.document.querySelector(tagName)._tag;
-          tag && tag.setState ? tag.setState(state) : riot.mount(tagName, { state });
+          tag ? tag.update({ opts: { state } }) : riot.mount(tagName, { state });
           return state;
         })
     }
@@ -418,6 +477,28 @@ function Riothing(cfg){
       try { return JSON.stringify(o1) === JSON.stringify(o2) }
       catch(e) { return false }
       return false;
+    }
+    
+    this.initReqAnimFrame = () => {
+      window.requestAnimFrame = window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        (cb => { window.setTimeout(cb, 1000 / 60) });
+      
+      window.cancelAnimFrame = window.cancelAnimationFrame || 
+        window.mozCancelAnimationFrame || 
+        (id => clearTimeout(id));
+    }
+    
+    this.qs = str => {
+      return str.split('&').reduce( (obj, p, i) => {
+        if(!~p.indexOf('='))
+          return Object.assign(obj, { [i]: p });
+        const def = p.split('=');
+        const key = def[0];
+        const value = ~def[1].indexOf(',') ? def[1].split(',') : def[1];
+        return Object.assign(obj, { [key]: value });
+      }, {});
     }
         
     return this;

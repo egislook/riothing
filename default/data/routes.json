@@ -1,11 +1,14 @@
 [
   {
     "route":  "/",
+    "view":   "page-main",
+    "navRouteHide": true,
   },
   {
     "route": "*",
     "view": "page-error",
     "splash": false,
-    "plain": true
+    "plain": true,
+    "navRouteHide": true, 
   }
 ]

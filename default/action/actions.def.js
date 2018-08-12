@@ -1,27 +1,22 @@
 function defaultActions(){
-
+  // if(typeof module !== 'undefined')
+  //   var marked = require('marked');
+  
   return {
 
     DEF_INIT: function(data){
+      
       !this.SERVER && this.DEV && this.act('DEF_DEV_TICKER', 2000);
-      if(!data.ENV.FETCHER || this.CLIENT)
-         return Promise.resolve(this.store('def').set(data));
+      if(!data.ENV.FETCHER || this.CLIENT){
+        const state = this.store('def').set(data);
+        //console.log(state);
+        return Promise.resolve(state);
+      }
       
       return this.act('DEF_FETCHER', data.ENV.FETCHER)
         .then( fetcherData => {
           return Promise.resolve(this.store('def').set(Object.assign(data, fetcherData)));
         })
-     
-    },
-    
-    DEF_FETCHER: function(fetcher){
-      
-      return Promise.all( 
-        fetcher.map(link => fetch(link.url)
-          .then( res => res.json() )
-          .then( data => Object.assign(link, { data: link.limit ? data.slice(0, link.limit) : data }))) 
-      )
-      .then( results => results.reduce( (obj, item) => Object.assign(obj, { [item.name]: item.data })  , {}));
     },
     
     DEF_DEV_TICKER: function(delay){
@@ -33,12 +28,23 @@ function defaultActions(){
       }
     },
     
+    DEF_FETCHER: function(fetcher){
+      return Promise.all( 
+        fetcher.map(link => fetch(link.url)
+          .then( res => res.json() )
+          .then( data => Object.assign(link, { data: link.limit ? data.slice(0, link.limit) : data }))) 
+      )
+      .then( results => results.reduce( (obj, item) => Object.assign(obj, { [item.name]: item.data })  , {}));
+    },
+    
+    
     DEF_SET_ROUTE: function({ route, req }){
       const state = this.store('def').set('STORE_ROUTE', {
         route,
         query:    req.query,
         cookies:  req.cookies.get(),
-        params:   req.params
+        params:   req.params,
+        hash:     req.hash
       });
       return Promise.resolve(state);
     },
@@ -59,8 +65,29 @@ function defaultActions(){
       Object.keys(cookies).forEach( name => window.Cookies.set(name, cookies[name], opts) );
     },
     
-    DEF_REDIRECT: function(route){
-      window.page(route);
+    DEF_REDIRECT: function(route = '#'){
+      if(~route.indexOf('#') && route.length === 1){
+        const topPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        window.location.hash = '';
+        document.documentElement.scrollTop = topPos;
+        return;
+      }
+      ~route.indexOf('/') ? window.page(route) : window.location = route;
+      return Promise.resolve();
+    },
+    
+    LINK: function(route){
+      if(route.splash)
+        return '?splash=' + (route.name || route.splash);
+      
+      if(route.popup)
+        return '#popup=' + (route.name || route.popup);
+        
+      return route.link || route.name;
+    },
+    
+    DEF_MARKDOWN: function(str){
+      return this.SERVER ? () => global.marked(str) : () => window.marked(str);
     },
     
     APP_INIT: function(){

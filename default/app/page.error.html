@@ -1,7 +1,22 @@
 <page-error>
-  <div class="w:100pc h:100vh dp:flx flxd:col jc:c bg:white">
-    <h1 class="fs:350pc fw:100">Page not found</h1>
-    <p class="fs:120pc fw:100">There must be some sort of Error.</p>
+  <div class="mxw:600px">
+    <h1 class="fs:350pc fw:100 m:10px-0 lh:1">Page not found</h1>
+    <h2 class="fs:120pc fw:100">There must be some sort of Error.</h2>
     <def-button classname="m:15px" href="/" text="back" />
+    <div if={!title}>
+      <h2 class="fw:300 m-t:40px">{title}</h2>
+      <p class="fs:120pc fw:100 m:20px-0">{desc}</p>
+    </div>
   </div>
+  <script>
+  
+    init(this.opts);
+    this.on('update', () => init(this.opts));
+    
+    function init({ state: { meta } }){
+      this.title  = meta && meta.title;
+      this.desc   = meta && meta.description;
+    }
+  </script>
+  
 </page-error>

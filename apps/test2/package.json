@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "watch": "export NODE_ENV=development|| set NODE_ENV=development&& nodemon -e html,js,json --watch ../../ index.js"
+    "watch": "export NODE_ENV=development|| set NODE_ENV=development&& nodemon -e html,js,json --watch ../../../ index.js"
   },
   "keywords": [
     "html5",

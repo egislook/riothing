@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "node test/index.js",
+    "watch": "export NODE_ENV=development|| set NODE_ENV=development&& nodemon -e html,js,json --watch ../../ --watch ./ test2/index.js",
     "start": "node -e \"require('./riothing').render('../public').then(console.log)\"",
     "min": "uglifyjs riothing.js > riothing.min.js"
   },
@@ -20,6 +21,7 @@
     "cookie": "^0.3.1",
     "express": "^4.16.3",
     "fucss": "^0.7.7",
+    "marked": "^0.4.0",
     "node-fetch": "^1.7.3",
     "riot": "^3.10.3"
   },

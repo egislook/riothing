@@ -1,14 +1,16 @@
 <def-button>
-  <a href={opts.href}
+  <a href={opts.route ? act('LINK', opts.route) : opts.href}
     onclick={handleClick} 
     class="{
-      'bd-w:1px bs:3 ts:all fw:600 ws:np hv-trl:0-1px hv-bs:2 hv-gs:10pc': true,
-      'w:100pc':                      opts.full,
-      'bg:sec c:white bd-c:sec':      !opts.bordered && !opts.white,
-      'bg:ts c:sec bd-c:sec':         opts.bordered && !opts.white,
-      'bg:white bd-c:sec c:sec':      opts.white,
-      'p:10px-24px br:2px fs:90pc ls:2px':   !opts.big,
-      'p:12px-30px br:5px fs:110pc ls:1.5px':  opts.big
+      'bd-w:1px bs:3 ts:all fw:600 ws:np hv-trl:0-1px_bs:2_gs:10pc': true,
+      'w:100pc': opts.full,
+      'bg:ts': opts.bordered && !opts.white,
+      'bg:white bd-c:sec c:sec': opts.white,
+      'p:10px-24px br:2px fs:85pc ls:2px tr:uc': !opts.big,
+      'p:12px-30px br:5px fs:110pc ls:1.5px': opts.big,
+      'bg:ts bd:0 bs:0 hv-bs:0 p-rl:5px': opts.empty,
+      'c:sec bd-c:sec': opts.sec && opts.bordered,
+      'bg:sec c:white bd-c:sec': opts.sec && !opts.bordered
     } {opts.classname}">
       <yield />{opts.text}
   </a>
@@ -18,13 +20,108 @@
       e.preventUpdate = true;
       e.preventDefault();
       e.stopPropagation();
-      opts.onclick(e);
+      this.opts.onclick && this.opts.onclick(e) || this.opts.handeClick(e);
     }
+    
   </script>
 </def-button>
 
+<def-input>
+  <div if={opts.labeled} class="dp:flx jc:sb ai:fe">
+    <label if={opts.title && opts.labeled} 
+      for={opts.title} 
+      class="c:sec fw:600 p-tb:5px p-l:10px ta:l fs:75pc ws:np tr:uppercase">
+        {opts.title}
+    </label>
+    <span class="fw:600 fs:80pc c:txta5 mdx-dp:n" if={opts.eg}>{opts.eg}</span>
+  </div>
+  <div class="{ 
+    'dp:flx br:5px ai:c': true, 
+    'bg:whitea9 c:txt': !opts.dark && !opts.prim, 
+    'bg:blacka8 c:white': opts.dark && !opts.prim,
+    'bg:prim c:white': !opts.dark && opts.prim,
+    'w:100pc': opts.full,
+    'mxw:500px': !opts.full,
+    'bs:1': opts.shadow
+  } {opts.classname}">
+    <label if={opts.title && !opts.labeled} 
+      for={opts.title} 
+      class="c:sec fw:600 p-tb:10px p-l:20px fs:75pc ws:np tr:uppercase">
+        {opts.title}
+    </label>
+    
+    <input 
+      id={opts.title}
+      class="p-tb:12px mnw:100px bg:ts fs:140pc fw:600 w:100pc bd:0 c:inh {
+        'p-rl:10px': opts.option,
+        'p-rl:15px': !opts.option,
+        'ta:r': !opts.labeled,
+        'ta:l': opts.labeled
+      }" 
+      riot-value={opts.value || opts.val} 
+      placeholder={opts.placeholder}
+      type={opts.type}
+      oninput={handleInput} />
+    
+    <a if={opts.option}
+      onclick={opts.handleclickoptions}
+      class="fs:100pc fw:600 p:10px-15px mnw:80px ta:c bd-l:1px-sld-greya5 br:0-5px-5px-0 lh:1">
+        <yield />{typeof opts.option === 'string' && opts.option}
+    </a>
+  </div>
+  <div class="md-dp:n ta:l p-l:10px p-tb:5px">
+    <span class="fw:600 fs:80pc c:txta5" if={opts.eg}>{opts.eg}</span>
+  </div>
+  <script>
+    this.value = this.opts.value || this.opts.val;
+    this.handleInput = (e) => {
+      this.value = e.target.value.length && e.target.value || undefined;
+      this.opts.handleinput && this.opts.handleinput(this.value);
+    }
+    
+    this.shouldUpdate = (data, nextOpts) => {
+      nextOpts.val && (this.value = nextOpts.val);
+      return true;
+    }
+  </script>
+</def-input>
+
+<def-nav>
+  <nav class="z:3 t,l:0 w:100pc dp:flx jc:sb ai:c p:0-5pc {
+    'ps:fx': opts.fixed,
+    'ps:ab': !opts.fixed,
+    'bg:white bd-b:1px-sld-greya2 c:txt': !opts.transparent,
+  } {opts.classname}">
+    <a href="/" class="dp:flx ai:c mdx-m:0-auto">
+      <img class="w:24px m-r:5px {'p:3px bg:blacka5 br:50pc w:30px-!': opts.transparent}" src={logo} />
+      <h2 class="fw:300 p-tb:20px">{name}</h2>
+    </a>
+    <div class="mdx-dp:n">
+      <def-button 
+        each={route in routes} 
+        if={route.show(opts.user)}
+        text={route.name} 
+        empty={!route.important}
+        bordered={route.important}
+        sec={route.important}
+        class="m:10px dp:ib"
+        route={route} />
+    </div>
+  </nav>
+  <script>
+    this.logo = this.opts.logo || this.opts.meta && this.opts.meta.favicon || '/def/favicon.png';
+    this.name = this.opts.name || this.opts.meta && this.opts.meta.name || 'Riothing';
+    this.routes = this.opts.routes || [
+      {name: 'home', link: '/'},
+      {name: 'readme'},
+      {name: 'contacts'}
+    ];
+    
+  </script>
+</def-nav>
+
 <def-fog>
-  <div onclick={opts.onclick} class="w:100pc h:100pc bg:whitea6 t,l:0 dp:flx ai:c jc:c z:20 {'ps:ab': !opts.fixed, 'ps:fx': opts.fixed}">
+  <div onclick={handeClick} class="w:100pc h:100pc bg:whitea6 t,l:0 dp:flx ai:c jc:c z:20 an:fadeIn-250ms {'ps:ab': !opts.fixed, 'ps:fx': opts.fixed}">
     <span if={opts.loading} class="br:100pc w,h:40px bg-c:sec an:scaler-1s-inf-eio" />
     <span if={opts.error} class="w:auto bd:1px-sld-red p:12px-24px m:10px mnw:200px bg:white br:2px bs:1px ta:l">
       <h2 class="m:12px-0">Error</h2>
@@ -33,7 +130,19 @@
         <def-button text="close" />
       </div>
     </span>
+    <div if={opts.popup}> 
+      <def-page page={opts.popup} state={opts.state} />
+      <yield /> 
+    </div>
   </div>
+  <script>
+    this.handeClick = (e) => {
+      e.preventUpdate = true;
+      e.preventDefault();
+      e.stopPropagation();
+      this.opts.onclick && this.opts.onclick(e) || this.opts.handleclick && this.opts.handleclick(e);
+    }
+  </script>
 </def-fog>
 
 <def-link>
@@ -47,31 +156,32 @@
 </def-link>
 
 <def-splash>
-  <div class="ps:fx bs:5 of:auto z:2 ts:all {
-    'op:0': !opts.page,
+  <div class="ps:fx bs:5 of:auto ts:all z:10 {
+    'op:0': !opts.splash,
     'r:0 t:0': opts.right,
     'l:0 t:0': opts.left,
     'b:0 r:0': opts.down,
     't:0 r:0': opts.top,
-    'tf:trx-100pc':   !opts.page && opts.right,
-    'trx:100npc':  !opts.page && opts.left,
-    'try:100pc':   !opts.page && opts.up,
-    'tf:try-100npc':  !opts.page && opts.down,
+    'tf:trx-100pc': !opts.splash && opts.right,
+    'trx:100npc': !opts.splash && opts.left,
+    'try:100pc': !opts.splash && opts.up,
+    'tf:try-100npc':  !opts.splash && opts.down,
+    'w,h:100pc mnh:100vh mdx-w:100pc': !opts.custom,
+    'bg:white c:txt': !opts.dark,
+    'c:white bg:blacka7': opts.dark,
   } {opts.classname}">
 
-    <div class="h:100pc" if={opts.page}>
-      <a href="/" class="fs:140pc p:20px-30px md-t,r:0 md-ps:ab mdx-ps:fx mdx-b,r:0 {
+    <div class="h:100pc" if={opts.splash}>
+      <a href="?" class="fs:140pc p:20px-30px md-t,r:0 md-ps:ab mdx-ps:fx mdx-b,r:0 {
         'fu-arrow-right':  opts.right,
         'fu-arrow-up':     opts.down,
         'fu-arrow-down':   opts.up,
         'fu-arrow-left':   opts.left
       }" />
       
-      <div if={false} class="dp:flx p:25px ai:c h:100pc">
+      <def-page state={opts.state} page={opts.splash} dark={opts.dark}>
         <yield/>
-      </div>
-      
-      <div class="dp:flx p:25px ai:c h:100pc" state={opts.state} data-is={opts.view || 'page-' + opts.page} />
+      </def-page>
       
     </div>
   </div>
@@ -79,70 +189,72 @@
     const { right, left, up, down, classname } = this.opts;
     if(!right && !left && !up && !down)
       this.opts.right = true;
-    if(!classname)
-      this.opts.classname = 'w,h:100pc mdx-w:100pc bg:white c:txt';
   </script>
 </def-splash>
 
-<def-input>
-  <div>
-    <input />
+<def-include>
+  <div
+    if={ opts.include }
+    data-is={ opts.include } 
+    opts={ opts } 
+    class="ts:all"
+    claanim="op:0.5 trl:100npc-0 l:0 t:0 ps:ab z:9 w:100pc"
+  />
+</def-include>
+
+<def-page>
+  <div class="w:100pc mnh:100vh dp:flx ai:c {'c:txt': !opts.dark}">
+    <def-wrap unlimited={opts.unlimited} classname={opts.classname} >
+      <def-include
+        include={opts.page.view} 
+        state={opts.state} />
+      <def-raw 
+        if={md} 
+        html={getMarkdown()} />
+      <yield />
+    </def-wrap>
   </div>
-</def-input>
+  <script>
+  
+    init.bind(this)();
+    this.on('update', init.bind(this));
+    
+    function init(){
+      this.opts.page.popup && console.log(this.opts.page);
+      const { markdown } = this.opts.state;
+      const { name, md } = this.opts.page;
+      this.md = md;
+      this.getMarkdown = (page) => this.act('DEF_MARKDOWN', markdown[md || name]);
+    }
+  </script>
+</def-page>
 
 <def-wrap style="width: 100%">
   <div class="w:100pc {'mxw:1100px p-rl:3pc': !opts.unlimited}">
-    <def-opts if={!opts.include} class={opts.classname}>
-      <yield />
-    </def-opts>
-    <div if={opts.include} 
-      data-is={ opts.include } 
-      opts={opts} 
-      class="ts:all"
-      classanim="op:0.5 trl:100npc-0 l:0 t:0 ps:ab z:9 w:100pc"
-    />
+    <def-opts class={opts.classname}> <yield /> </def-opts>
   </div>
-  <div if={false && opts.centered} class="w:100pc h:100vh p-rl:3pc dp:flx ai:c {'mxw:1100px p-rl:3pc': !opts.unlimited} {opts.class}">
-    <div>
-      <def-opts if={!opts.include} class={opts.classname}>
-        <yield />
-      </def-opts>
-      <div if={opts.include} data-is={ opts.include } opts={opts} />
-    </div>
-  </div>
-  <script>
-    //this.root.removeAttribute('class');
-    // this.on('update', data => console.log('wtf', data, this.opts))
-  
-    // Object.keys(this.parent).forEach( key => !this[key] ? this[key] = this.parent[key] : null );
-    // Object.assign(this.opts, this.parent.opts);
-    // this.shouldUpdate = (data, newOpts) => {
-    //   Object.assign(this.opts, this.parent.opts);
-    // }
-  </script>
 </def-wrap>
 
-<def-raw>
+<def-raw class={opts.classname || classMarkdown}>
   <script>
+    this.classMarkdown = {
+      'ta:l m:40px-auto dp:bk m-l:30px_li': true,
+      'fs:120pc_fw:100 m:20px-0-!_p,ul,ol': true,
+      'fs:350pc_fw:100_m:20px-0_lh:1_h1': true,
+      'm:15px-0-5px_fw:300_h2 c:sec_fw:400_a': true,
+      'mxw:800px': !this.opts.unlimited
+    }
+    
     if(this.opts.html)
-      this.root.innerHTML = this.opts.html;
+      this.root.innerHTML = typeof this.opts.html === 'function' 
+        ? this.opts.html() 
+        : this.opts.html;
     
     return;
       
     this.escape = document.createElement('textarea');
-    
-    this.escapeHTML = (html) => {
-      this.escape.textContent = html;
-      return this.escape.innerHTML;
-    }
-    
-    this.unescapeHTML = (html) => {
-      this.escape.innerHTML = html;
-      return this.escape.textContent;
-    }
-    
-    if(this.opts.html)
-      this.root.innerHTML = this.unescapeHTML(this.opts.html);
+    this.escapeHTML = (html) => { this.escape.textContent = html; return this.escape.innerHTML; }
+    this.unescapeHTML = (html) => { this.escape.innerHTML = html; return this.escape.textContent; }
       
   </script>
 </def-raw>
@@ -153,7 +265,12 @@ riot.tag('def-opts', false, function(opts){
   
   this.shouldUpdate = (data, newOpts) => {
     Object.assign(this.opts, this.parent.parent.opts);
-    Object.keys(this.parent.parent).forEach( key => !this[key] || this[key] !== this.parent.parent[key] ? this[key] = this.parent.parent[key] : null );
+    Object.keys(this.parent.parent)
+      .forEach( key => {
+        return !this[key] || this[key] !== this.parent.parent[key] 
+          ? this[key] = this.parent.parent[key] 
+          : null 
+      });
     return true;
   }
 })

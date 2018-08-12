@@ -1,6 +1,6 @@
 'use strict';
 
-const DEV       = false;
+const DEV       = true;
 const express   = require('express');
 const app       = express();
 const fs        = require('fs');
@@ -9,7 +9,9 @@ const Module    = require('module');
 const path      = require('path');
 const fetch     = global.fetch = require('node-fetch');
 const cookie    = require('cookie');
-const fucss     = DEV ? require('../fucss/fucss.js') : require('fucss'); 
+
+const marked    = global.marked = require('marked');
+const fucss     = global.fucss  = DEV ? require('../fucss/fucss.js') : require('fucss'); 
 
 const CLIENT = {
   VIEWS:    [],
@@ -23,7 +25,10 @@ const CLIENT = {
 const SERVER = {
   ACTIONS: [],
   STORES:  [],
+  VIEWS:   [],
 };
+
+let STYLE;
 
 let CFG = {
   // server
@@ -42,6 +47,7 @@ let CFG = {
   ACTION_DIR:   '/action',
   DATA_DIR:     '/data',
   APP_DIR:      '/app',
+  MD_DIR:       '/md',
   // files
   CLIENT_FILE:     '/riothing.js',
   ROOT_FILE:       '/root.html',
@@ -50,9 +56,11 @@ let CFG = {
   INCLUDE_CLIENT:       true,
   CLIENTLESS:           false,
   SERV_STYLE:           true,
+  AUTO_ROUTER:          true,
   // tags
   TAG_NAME:               'tag-app',
   DEF_STORE_NAME:         'def',
+  PAGE_NAME_SEP:          'page-',
   // action names
   INIT_DEF_ACTION_NAME:   'DEF_INIT',
   DEF_ROUTE_ACTION_NAME:  'DEF_SET_ROUTE',
@@ -81,6 +89,7 @@ function Setup(cfg){
     // returns the function names and extras to execute on client and server including routes
     SERVER.ACTIONS  = actions.slice().map(md => md.name);
     SERVER.STORES   = stores.slice().map(md => md.name);
+    SERVER.VIEWS    = views.filter(md => md.type !== 'default').map(md => md.name);
     
     return {
       defaults: [
@@ -94,8 +103,8 @@ function Setup(cfg){
     // style compilation missing
     // compiles and converts client initial function to script string
     CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { 
-      actions: SERVER.ACTIONS, 
-      stores: SERVER.STORES, 
+      actions:  SERVER.ACTIONS, 
+      stores:   SERVER.STORES, 
       defaults 
     });
     
@@ -107,6 +116,12 @@ function Setup(cfg){
     utils.compileAndMerge(CFG.PUB_DIR, CFG.DATA_DIR, CFG.DEF_DIR)
       .then( data => Object.assign(data, { ENV: CFG.ENV }) )
   )
+  .then( data => utils.getFiles(CFG.PUB_DIR, CFG.MD_DIR, false, 'markdown')
+    .then( markdown => markdown.reduce( (obj, md) => Object.assign(obj, { [md.name]: md.text }), {})  )
+    .then( markdown => Object.assign(data, { markdown }) )
+    .catch( err => console.log(err) && data)
+  )
+  .then( data => CFG.AUTO_ROUTER ? utils.autoRouteGenerator(data, CFG) : data)
   .then( data => {
     // Init client data
     CLIENT.DATA = data;
@@ -148,24 +163,21 @@ module.exports.server = (cfg) => {
     FETCHER: cfg.fetcher,
   };
   
+  // Configuring the app
   utils.configure(cfg, ENV);
   
+  // Serving static files
   app.use('/', express.static(CFG.PUB_DIR));
+  app.use('/def/', express.static(CFG.DEF_DIR + '/img'));
   
-  /** TODO!!!
-    1. Clean dev env and tools (sort this stupid server starting issue. Can everything be moved to riothing. Just include express inside it)
-    2. generate css file
-    3. Create default actions.js, store.js, root.html inside riothing
-    4. sort out route.js issue
-  **/
-  
+  // Serving style
   CFG.SERV_STYLE && app.get('/style.css', (req, res) => { 
     res.setHeader('content-type', 'text/css');
-    res.send(utils.compileStyle(CFG.PUB_DIR, CFG.STYLE_FILE)) 
+    STYLE = STYLE || utils.compileStyle(CFG.PUB_DIR, CFG.STYLE_FILE);
+    res.send(STYLE); 
   });
   
   if(ENV.DEV){
-    //app.use('/packs', express.static( process.cwd() + '../../_packs'));
     app.get('/env', (req, res) => { res.json(ENV) });
     app.use((req, res, next) => {
       ENV.READY ? ENV.SYNC = true : false;
@@ -189,8 +201,10 @@ let utils = {};
 
 utils.readDir = (pub, f = '', files) => {
   files = files || [];
-  fs.readdirSync(pub + f).forEach(file => {
+  if(!fs.existsSync(pub + f))
+    return Promise.resolve(files);
     
+  fs.readdirSync(pub + f).forEach(file => {
     fs.lstatSync([pub, f, file].join('/')).isDirectory()
       ? utils.readDir(pub, [f, file].join('/'), files)
       : files.push([f, file].join('/'));
@@ -202,13 +216,13 @@ utils.readDir = (pub, f = '', files) => {
 
 utils.clientRequire = (filePath, code, include) => {
   filePath  = path.resolve(filePath);
-  include   = include || [`var riot = require('riot');`];
+  include   = include || [`var riot = require('riot')`];
   code      = code    || fs.readFileSync(filePath, 'utf8');
   let paths = Module._nodeModulePaths(__dirname);
   if(!code.length)
     return false; new Error(`${filePath} can not be used as a module`);
   code = `
-    ${ include.join('\n') }
+    ${ include.join(';\n') }
     module.exports = ${ code }
   `;
 	var m = new Module(filePath, module.parent);
@@ -219,13 +233,15 @@ utils.clientRequire = (filePath, code, include) => {
 };
 
 utils.compileRiot = (filePath, returnStr) => {
-  let riotStr = riot.compile(fs.readFileSync(filePath, 'utf8'));
-  fucss.storeHTML(riotStr);
-  const md = utils.clientRequire(filePath, riotStr);
-  return returnStr ? riotStr : md;
+  let fn = riot.compile(fs.readFileSync(filePath, 'utf8'));
+  fucss.storeHTML(fn);
+  const name = utils.clientRequire(filePath, fn);
+  return !returnStr ? name : { fn, name };
 };
 
 utils.compileStyle = (pub, file, html) => {
+  CLIENT.DATA.classBody && fucss.storeHTML(CLIENT.DATA.classBody);
+    
   const cssStr = fucss.generateStyling({
     riot: html || fucss.HTML.join(''),
     returnStyle: true,
@@ -248,8 +264,10 @@ utils.compileRoutes = (pub, file, def) => {
     return defaultRoutes;
   }
   
-  return [].concat(require(pub + file), defaultRoutes).reduce( (arr, item, i, all) => {
-    item.route && !arr.find( el => el.route === item.route ) && arr.push(item);
+  let routes = [].concat(require(pub + file), defaultRoutes);
+  
+  return routes.reduce( (arr, item, i, all) => {
+    (item.route || item.view || item.name) && !arr.find( el => item.route && el.route === item.route ) && arr.push(item);
     return arr;
   }, []);
 }
@@ -263,20 +281,28 @@ utils.compileRoot = (pub, file, def) => {
   utils.compileRiot(pub + file)
 }
 
-utils.compileAndMerge = (pub, dir, def) => {
-  return utils.compileWithDefaults(pub, dir, def, false, true).then( mds => mds.reduce( (obj, item) => {
-    const value = obj[item.name];
-    if(value && value.constructor === Array){
-      obj[item.name] = value.concat(item.data[item.name]).reduce( (arr, item) => {
-        item.route && !arr.find( el => el.route === item.route ) && arr.push(item);
-        return arr;
-      }, []);
+utils.compileAndMerge = (pub, dir, def, isPubFirst) => {
+  return utils.compileWithDefaults(pub, dir, def, false, !isPubFirst)
+    .then( mds => mds.reduce( (obj, item) => {
+      // skip default config
+      if(obj['meta'] && item.name === 'config' && item.type === 'default')
+        return obj;
+      const value = obj[item.name];
       
-      return obj;
-    }
-      
-    return Object.assign(obj, item.data);
-  }, {} ));
+      if(value && value.constructor === Array){
+        obj[item.name] = value.concat(item.data[item.name]);
+        
+        if(item.name === 'routes'){
+          obj[item.name] = obj[item.name].reduce( (arr, item) => {
+            !arr.find( el => item.route && el.route === item.route ) && arr.push(item);
+            return arr;
+          }, []);
+          
+          return obj;
+        }
+      }
+      return Object.assign(obj, item.data);
+    }, {} ));
 }
 
 utils.compileWithDefaults = (pub, dir, def, isViews, isPubFirst) => {
@@ -292,18 +318,25 @@ utils.compileWithDefaults = (pub, dir, def, isViews, isPubFirst) => {
   links = isPubFirst ? links.reverse() : links;
   
   return Promise.all( links.map( link => utils.getFiles(link.path, dir, isViews, link.type) ) )
-    .then( ([ defFiles, pubFiles ]) => defFiles.concat(pubFiles || []) )
+    .then( ([ defFiles, pubFiles ]) => defFiles.concat(pubFiles || []))
 }
 
 utils.getFiles = (pub, dir, views, type) => {
   
   return utils.readDir(pub + dir)
     .then(files => Promise.all(files.map(file => {
-      let fn = views
-        ? utils.compileRiot(pub + dir + file, true)
-        : utils.clientRequire(pub + dir + file);
-        
-      return new ExternalModule(dir, file, fn, type);
+      
+      if(type === 'markdown'){
+        const text = fs.readFileSync(pub + dir + file, 'utf8');
+        return new ExternalModule(dir, file, null, type, text)
+      }
+      
+      if(views){
+        const md = utils.compileRiot(pub + dir + file, true);
+        return new ExternalModule(dir, file, md.fn, type, false, md.name);
+      }
+      
+      return new ExternalModule(dir, file, utils.clientRequire(pub + dir + file), type);
     })))
     .then(extMods => extMods.filter(extMod => extMod.name))
 }
@@ -333,15 +366,18 @@ utils.getScript = (
       ENV:      ${JSON.stringify(ENV)},
     });
     riot.settings.autoUpdate = false;
+    marked.setOptions({ headerIds: false });
     riothing.act('${INIT_DEF_ACTION_NAME}', window.DATA)
       .then(data => riothing.act('${INIT_ACTION_NAME}', data))
       .then(content => {
         page('*', (req, next) => {
           req.cookies = Cookies;
+          req.hash = riothing.utils.qs(window.location.hash.replace('#', ''));
+          req.query = riothing.utils.qs(req.querystring);
           next();
         });
         const routes = riothing.store('${DEF_STORE_NAME}').get('routes');
-        routes.forEach( ({ route, method, actions }) => page(route, req => {
+        routes.forEach( ({ route, method, actions }) => route && page(route, req => {
           riothing.action('${DEF_ROUTE_ACTION_NAME}')({ route, req })
             .then( () => riothing.act('DEF_RESTATE'));
         }));
@@ -419,18 +455,45 @@ utils.configure = (cfg, env) => {
   return CFG;
 }
 
-function ExternalModule(dir, file, fn, type){
+utils.autoRouteGenerator = (data, { PAGE_NAME_SEP }) => {
+  data.markdown && Object.keys(data.markdown)
+    .filter( md => !data.routes.find( route => route.md === md ))
+    .forEach( md => data.routes.unshift({
+      name: md,
+      md,
+      splash: true,
+    }));
+    
+  data.routes && SERVER.VIEWS
+    .filter( view => view.includes(PAGE_NAME_SEP) && !data.routes.find( route => ~['page-main', route.view].indexOf(view) ))
+    .forEach( view => {
+      const name = view.replace(PAGE_NAME_SEP, '');
+      data.routes.unshift({ 
+        route: '/' + name, 
+        view,
+        name,
+        //actions: ['APP_ROUTE'],
+      });
+    });
+  
+  return data;
+}
+
+function ExternalModule(dir, file, fn, type, text, name){
   this.client = dir + file;
   this.fn   = typeof fn === 'function' && fn;
   this.code = typeof fn === 'function' ? fn.toString() : typeof fn === 'string' && fn;
   this.data = typeof fn === 'object' && fn;
-  this.name = typeof fn === 'string' && fn || fn.name || file.replace('/', '').replace('.json', '');
+  this.name = name || typeof fn === 'string' && fn || (fn && fn.name) || file.replace('/', '').replace('.json', '').replace('.md', '');
   
   if(this.fn) 
     global[this.name] = this.fn;
   
   if(type) 
     this.type = type;
+    
+  if(text)
+    this.text = text;
   
   //console.log(this.data.constructor, file)
   if(this.data && (this.data.constructor === Array || Object.keys(this.data).length > 4))

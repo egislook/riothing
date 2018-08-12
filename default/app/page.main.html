@@ -1,0 +1,17 @@
+<page-main>
+  <div class="mxw:600px">
+    <h1 class="fs:350pc fw:100 m:20px-0">Main Page</h1>
+    <h2 class="fw:300">{title}</h2>
+    <p class="fs:120pc fw:100 m:20px-0">{desc}</p>
+  </div>
+  <script>
+  
+    init(this.opts);
+    this.on('update', () => init(this.opts));
+    
+    function init({ state: { meta } }){
+      this.title  = meta.title;
+      this.desc   = meta.description;
+    }
+  </script>
+</page-main>
