@@ -37,8 +37,17 @@ function defaultActions(){
       .then( results => results.reduce( (obj, item) => Object.assign(obj, { [item.name]: item.data })  , {}));
     },
     
+    DEF_AUTH: function({ state, res }){
+      const { cookies, page } = state;
+      const unauthorized = page.auth && !cookies.token;
+      
+      if(unauthorized)
+        this.act('DEF_REDIRECT', page.auth, { redirect: res && res.redirect.bind(res), main: true });
+      
+      return Promise.resolve(!unauthorized && state);
+    },
     
-    DEF_SET_ROUTE: function({ route, req }){
+    DEF_SET_ROUTE: function({ route, req, res }){
       const state = this.store('def').set('STORE_ROUTE', {
         route,
         query:    req.query,
@@ -46,7 +55,8 @@ function defaultActions(){
         params:   req.params,
         hash:     req.hash
       });
-      return Promise.resolve(state);
+      
+      return this.act('DEF_AUTH', { state, res });
     },
     
     DEF_RESTATE: function(){
@@ -65,28 +75,45 @@ function defaultActions(){
       Object.keys(cookies).forEach( name => window.Cookies.set(name, cookies[name], opts) );
     },
     
-    DEF_REDIRECT: function(route = '#'){
-      if(~route.indexOf('#') && route.length === 1){
+    DEF_REDIRECT: function(route = '#', data = {}){
+      if(route && typeof route === 'string' && ~route.indexOf('#') && route.length === 1){
         const topPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
         window.location.hash = '';
         document.documentElement.scrollTop = topPos;
         return;
       }
-      ~route.indexOf('/') ? window.page(route) : window.location = route;
-      return Promise.resolve();
+      
+      const link = this.act('LINK', route, data.main);
+      
+      data.redirect
+        ? data.redirect(link)
+        : window.page.redirect(link) //!~route.indexOf('#') ? window.page(link) : window.location = link;
+        
+      return Promise.reject('redirect');
     },
     
-    LINK: function(route){
+    LINK: function(route, main){
+      route = typeof route === 'string'
+        ? this.store('def').get('navRoutes').find(({ name, link }) => name === route || link === route) || route
+        : route;
+      
+      if(typeof route !== 'object')
+        return typeof route === 'string' ? route : '/';
+      
       if(route.splash)
-        return '?splash=' + (route.name || route.splash);
+        return `${main && '/' || ''}?splash=${(route.name || route.splash)}`;
       
       if(route.popup)
         return '#popup=' + (route.name || route.popup);
         
-      return route.link || route.name;
+      return route.link || route.name || route;
     },
     
     DEF_MARKDOWN: function(str){
+      if(typeof str === 'function')
+        str = str();
+      
+      str = str || '';
       return this.SERVER ? () => global.marked(str) : () => window.marked(str);
     },
     

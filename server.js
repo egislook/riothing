@@ -1,6 +1,6 @@
 'use strict';
 
-const DEV       = false;
+const DEV       = true;
 const express   = require('express');
 const app       = express();
 const fs        = require('fs');
@@ -370,16 +370,18 @@ utils.getScript = (
     riothing.act('${INIT_DEF_ACTION_NAME}', window.DATA)
       .then(data => riothing.act('${INIT_ACTION_NAME}', data))
       .then(content => {
+      
         page('*', (req, next) => {
           req.cookies = Cookies;
           req.hash = riothing.utils.qs(window.location.hash.replace('#', ''));
           req.query = riothing.utils.qs(req.querystring);
           next();
         });
+        
         const routes = riothing.store('${DEF_STORE_NAME}').get('routes');
         routes.forEach( ({ route, method, actions }) => route && page(route, req => {
           riothing.action('${DEF_ROUTE_ACTION_NAME}')({ route, req })
-            .then( () => riothing.act('DEF_RESTATE'));
+            .then( state => state && riothing.act('DEF_RESTATE') );
         }));
         page.start();
       });
@@ -428,21 +430,24 @@ utils.router = (data, riothing) => {
       utils.cookies,
       //(req, res, next) => { riothing.restate(); return next() },
       (req, res, next) => {
-        
         req.riothing = new Riothing({ 
           actions:  SERVER.ACTIONS, 
           stores:   SERVER.STORES, 
           ENV:      CFG.ENV 
         });
-        
         req.riothing.restate(extracted);
-        
-        req.riothing.action(CFG.DEF_ROUTE_ACTION_NAME)({ route, req });
+        next();
+      },
+      (req, res, next) => {
+        req.riothing.action(CFG.DEF_ROUTE_ACTION_NAME)({ route, req, res })
+          .then( state => state && next() )
+      },
+      (req, res, next) => {
         actions = actions || ['APP_ROUTE'];
         actions = typeof actions === 'string' ? [actions] : actions;
-        req.riothing.utils.promiseChain(actions.map( action => req.riothing.action(action) ))
+        req.riothing.utils.promiseChain(actions.map( action => req.riothing.action(action, { redirect: res.redirect.bind(res) }) ))
           .then( data => res.send(res.render(data)) )
-          .catch( err => console.log('stuff', err) );
+          .catch( err => console.log('[RT]', err) );
       }
     ])
   );

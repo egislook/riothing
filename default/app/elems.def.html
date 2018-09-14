@@ -10,7 +10,9 @@
       'p:12px-30px br:5px fs:110pc ls:1.5px': opts.big,
       'bg:ts bd:0 bs:0 hv-bs:0 p-rl:5px': opts.empty,
       'c:sec bd-c:sec': opts.sec && opts.bordered,
-      'bg:sec c:white bd-c:sec': opts.sec && !opts.bordered
+      'bg:sec c:white bd-c:sec': opts.sec && !opts.bordered,
+      'c:white bg-c:prim bd-c:prim': opts.prim && !opts.bordered,
+      'c:sec bg-c:white bd-c:white': opts.white && !opts.bordered,
     } {opts.classname}">
       <yield />{opts.text}
   </a>
@@ -33,16 +35,19 @@
       class="c:sec fw:600 p-tb:5px p-l:10px ta:l fs:75pc ws:np tr:uppercase">
         {opts.title}
     </label>
-    <span class="fw:600 fs:80pc c:txta5 mdx-dp:n" if={opts.eg}>{opts.eg}</span>
+    <span class="fw:600 fs:80pc c:txta3 mdx-dp:n p-tb:5px p-r:10px" if={opts.eg}><small class="c:txta2">e.g.</small> {opts.eg}</span>
   </div>
   <div class="{ 
     'dp:flx br:5px ai:c': true, 
-    'bg:whitea9 c:txt': !opts.dark && !opts.prim, 
-    'bg:blacka8 c:white': opts.dark && !opts.prim,
-    'bg:prim c:white': !opts.dark && opts.prim,
+    'bg:whitea9 c:txt': !opts.dark && !opts.prim && !opts.bordered, 
+    'bg:blacka8 c:white': opts.dark && !opts.prim && !opts.bordered,
+    'bg:prim c:white': !opts.dark && opts.prim && !opts.bordered,
     'w:100pc': opts.full,
     'mxw:500px': !opts.full,
-    'bs:1': opts.shadow
+    'bs:1': opts.shadow && !opts.bordered,
+    'bd-w:1px': opts.bordered,
+    'bd-c:grey300 c:prim': opts.bordered && !opts.dark && !opts.prim,
+    'bd-c:prim200 c:prim': opts.bordered && opts.prim
   } {opts.classname}">
     <label if={opts.title && !opts.labeled} 
       for={opts.title} 
@@ -65,12 +70,12 @@
     
     <a if={opts.option}
       onclick={opts.handleclickoptions}
-      class="fs:100pc fw:600 p:10px-15px mnw:80px ta:c bd-l:1px-sld-greya5 br:0-5px-5px-0 lh:1">
+      class="fs:100pc fw:600 p:8px-15px mnw:80px ta:c bd-l:1px-sld-greya3 br:0-5px-5px-0 lh:1">
         <yield />{typeof opts.option === 'string' && opts.option}
     </a>
   </div>
   <div class="md-dp:n ta:l p-l:10px p-tb:5px">
-    <span class="fw:600 fs:80pc c:txta5" if={opts.eg}>{opts.eg}</span>
+    <span if={opts.eg} class="fw:600 fs:80pc c:txta5"><small class="c:txta2">e.g.</small> {opts.eg}</span>
   </div>
   <script>
     this.value = this.opts.value || this.opts.val;
@@ -85,6 +90,34 @@
     }
   </script>
 </def-input>
+
+<def-check>
+  <div onclick={handleClick} class="crs:pt fs:80pc fw:400 c:txt200 dp:flx md-ai:c jc:c ta:l m:20px c:prim_fw:600_a">
+    <span 
+      class={{
+        'ts:all h,w,lh,mnw:25px br:25pc ta:c m-r:10px fu-check bd-w:1px': true,
+        'bg:sec c:white bs:1': checked, 
+        'bg:white c:greya5': !checked 
+      }}
+    />
+    <def-md md={opts.md || opts.markdown || opts.label} />
+  </div>
+  <script>
+    this.checked = false;
+    
+    this.handleClick = e => {
+      if(!e.target.href){
+        this.opts.handlechange && this.opts.handlechange(!this.checked);
+        this.update({ checked: !this.checked })
+      }
+    }
+    
+    this.shouldUpdate = (data, nextOpts) => {
+      nextOpts.checked && (this.checked = nextOpts.checked);
+      return true;
+    }
+  </script>
+</def-check>
 
 <def-nav>
   <nav class="z:3 t,l:0 w:100pc dp:flx jc:sb ai:c p:0-5pc {
@@ -121,7 +154,7 @@
 </def-nav>
 
 <def-fog>
-  <div onclick={handeClick} class="w:100pc h:100pc bg:whitea6 t,l:0 dp:flx ai:c jc:c z:20 an:fadeIn-250ms {'ps:ab': !opts.fixed, 'ps:fx': opts.fixed}">
+  <div onclick={handeClick} class="w:100pc h:100pc bg:prima8 t,l:0 dp:flx ai:c jc:c z:20 an:fadeIn-250ms {'ps:ab': !opts.fixed, 'ps:fx': opts.fixed}">
     <span if={opts.loading} class="br:100pc w,h:40px bg-c:sec an:scaler-1s-inf-eio" />
     <span if={opts.error} class="w:auto bd:1px-sld-red p:12px-24px m:10px mnw:200px bg:white br:2px bs:1px ta:l">
       <h2 class="m:12px-0">Error</h2>
@@ -130,7 +163,7 @@
         <def-button text="close" />
       </div>
     </span>
-    <div if={opts.popup}> 
+    <div class="mxh:100vh of:auto" if={opts.popup}> 
       <def-page page={opts.popup} state={opts.state} />
       <yield /> 
     </div>
@@ -235,13 +268,21 @@
   </div>
 </def-wrap>
 
+<def-md class="{'dp:bk': !opts.clean } { opts.class }">
+  <script>
+    this.on('update', () => { this.root.innerHTML = this.act('DEF_MARKDOWN', this.opts.markdown || this.opts.md)() });
+    this.root.innerHTML = this.act('DEF_MARKDOWN', this.opts.markdown || this.opts.md)();
+  </script>
+</def-md>
+
 <def-raw class={opts.classname || classMarkdown}>
   <script>
     this.classMarkdown = {
       'ta:l m:40px-auto dp:bk m-l:30px_li': true,
       'fs:120pc_fw:100 m:20px-0-!_p,ul,ol': true,
-      'fs:350pc_fw:100_m:20px-0_lh:1_h1': true,
+      'fs:320pc_fw:100_m:60px-0_lh:1_h1': true,
       'm:15px-0-5px_fw:300_h2 c:sec_fw:400_a': true,
+      'c_txt300_bd-l:1px-sld-sec_p-l:10px_blockquote': true,
       'mxw:800px': !this.opts.unlimited
     }
     

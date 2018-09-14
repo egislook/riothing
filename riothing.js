@@ -28,7 +28,7 @@ function Riothing(cfg){
     
   this.act = (actionName, payload, cb) => {
     const action = this.actions[actionName];
-    actionName !== 'LINK' && this.utils.log('act', actionName, !action && 'missing' || '');
+    !~['LINK', 'DEF_REDIRECT', 'DEF_MARKDOWN'].indexOf(actionName) && this.utils.log('act', actionName, !action && 'missing' || '');
     return action 
       ? this.actions[actionName](payload, cb) 
       : Promise.resolve('missing action ' + actionName);
@@ -450,8 +450,8 @@ function Riothing(cfg){
       if(!promises.length)
         return Promise.resolve(data);
       return promises.reduce( (promise, fn) =>
-        promise.then( obj => fn(obj).then( res => Object.assign(obj, res) )),
-        Promise.resolve(data)
+        promise
+          .then( obj => fn(obj).then( res => Object.assign(obj, res) ) ), Promise.resolve(data)
       )
     }
     
