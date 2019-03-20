@@ -22,11 +22,12 @@ function defaultStore(initState){
       
     //this['STORE_ROUTE_ATTR'] = data => this.set(data, true);
     this['STORE_ROUTE'] = data => {
-      const { query: { splash }, hash, route } = data;
+      const { query: { splash }, hash, route, back } = data;
       const popup = hash && hash.popup;
       
       const pages = {
         page:   new Route(this.routes.find( r => r.route === route ) || {}),
+        back,
         splash: splash  && new Route(this.routes.find( r => r.splash && r.name === splash ) || {}),
         popup:  popup   && new Route(this.routes.find( r => r.popup && r.name === popup ) || {}),
       };

@@ -48,8 +48,11 @@ function defaultActions(){
     },
     
     DEF_SET_ROUTE: function({ route, req, res }){
+      const back = this.store('def').get('route');
+      
       const state = this.store('def').set('STORE_ROUTE', {
         route,
+        back,
         query:    req.query,
         cookies:  req.cookies.get(),
         params:   req.params,
@@ -87,7 +90,7 @@ function defaultActions(){
       
       data.redirect
         ? data.redirect(link)
-        : window.page.redirect(link) //!~route.indexOf('#') ? window.page(link) : window.location = link;
+        : window.page.redirect(link); //!~route.indexOf('#') ? window.page(link) : window.location = link;
         
       return Promise.reject('redirect');
     },

@@ -278,7 +278,7 @@ function Riothing(cfg){
         { label: 'month',   seconds: 2592000 },
         { label: 'day',     seconds: 86400 },
         { label: 'hour',    seconds: 3600 },
-        { label: 'minute',  seconds: 60 },
+        { label: 'min',  seconds: 60 },
         { label: 'second',  seconds: 1 }
       ];
       
@@ -292,7 +292,7 @@ function Riothing(cfg){
     
     this.date = (timestamp = 0, type = 'date') => {
       const dt = new Date(timestamp);
-      if(type === 'iso') return dt.toISOString().replace('T', ' ').split(':00.').shift()
+      if(type === 'iso') return dt.toISOString().replace('T', ' ').split('.').shift()
       
       let d = dt.getDate(); d = d < 10 ? '0' + d : d;
       let m = dt.getMonth() + 1; m = m < 10 ? '0' + m : m;
@@ -385,9 +385,8 @@ function Riothing(cfg){
       
       webSocket.onmessage = e => {
         const data = JSON.parse(e.data);
-        
         switch(data.type){
-          
+
           case 'init_success':
             this.log('socket connected');
             queries.forEach( (query, id) => webSocket.send(JSON.stringify({
