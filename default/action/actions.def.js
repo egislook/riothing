@@ -49,10 +49,11 @@ function defaultActions(){
     
     DEF_SET_ROUTE: function({ route, req, res }){
       const back = this.store('def').get('route');
-      
+      const prevBack = this.store('def').get('back');
+      // console.log({ back, prevBack, route });
       const state = this.store('def').set('STORE_ROUTE', {
         route,
-        back,
+        back: back === route ? prevBack : back,
         query:    req.query,
         cookies:  req.cookies.get(),
         params:   req.params,
