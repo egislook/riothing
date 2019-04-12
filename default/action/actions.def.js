@@ -29,12 +29,21 @@ function defaultActions(){
     },
     
     DEF_FETCHER: function(fetcher){
-      return Promise.all( 
-        fetcher.map(link => fetch(link.url)
-          .then( res => res.json() )
-          .then( data => Object.assign(link, { data: link.limit ? data.slice(0, link.limit) : data }))) 
+      // console.log('DEF_FETHCER', this.utils);
+      
+      const gql = this.utils.gql;
+      
+      const promises = fetcher.map(link => 
+        !link.GQ 
+          ? fetch(link.url)
+              .then( res => res.json() )
+              .then( data => Object.assign(link, { data: link.limit ? data.slice(0, link.limit) : data }) )
+          : gql(link)
+              .then( data => Object.assign(link, { data }) )
       )
-      .then( results => results.reduce( (obj, item) => Object.assign(obj, { [item.name]: item.data })  , {}));
+        
+      return Promise.all(promises)
+        .then( results => results.reduce( (obj, item) => Object.assign(obj, { [item.name]: item.data }), {}) );
     },
     
     DEF_AUTH: function({ state, res }){
@@ -116,7 +125,7 @@ function defaultActions(){
     DEF_MARKDOWN: function(str){
       if(typeof str === 'function')
         str = str();
-      
+        
       str = str || '';
       return this.SERVER ? () => global.marked(str) : () => window.marked(str);
     },

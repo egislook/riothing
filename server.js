@@ -161,6 +161,7 @@ module.exports.server = (cfg) => {
     VER: cfg.ver  || process.env.npm_package_version,
     GQ:  cfg.gq,
     FETCHER: cfg.fetcher,
+    CFG: cfg,
   };
   
   // Configuring the app

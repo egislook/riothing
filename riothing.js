@@ -109,7 +109,6 @@ function Riothing(cfg){
         
         // Animation
         this.on('before-unmount', () => {
-      
           if(typeof window === 'undefined' || !this.opts.classanim)
             return;
             
@@ -187,7 +186,7 @@ function Riothing(cfg){
               ~keys.indexOf(key) ? Object.assign(obj, { [key]: state[key] }) : obj
             , {});
             
-            console.log(changed, state);
+            // console.log(changed, state);
             
             Object.keys(state).length && this.update(state); 
           })
@@ -340,9 +339,9 @@ function Riothing(cfg){
           return fucss.generateStyling({ riot: html, returnStyle: false })
         })
         
-    this.gql = ({ query, GQ, token, variables }) => {
-      GQ = ENV.GQ || GQ;
-      return fetch('https://api.graph.cool/simple/v1/' + GQ, {
+    this.gql = ({ query, GQ = ENV.GQ, token, variables, endpoint = 'https://api.graph.cool/simple/v1/' }) => {
+      //GQ = ENV.GQ || GQ;
+      return fetch(endpoint + GQ, {
         method: 'POST',
         headers: { 
           'content-type':   'application/json',

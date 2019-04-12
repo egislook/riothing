@@ -68,6 +68,9 @@
   <div class="md-dp:n ta:l p-l:10px p-tb:5px">
     <span if={opts.eg} class="fw:600 fs:80pc c:txta5"><small class="c:txta2">e.g.</small> {opts.eg}</span>
   </div>
+  
+  
+  
   <script>
     this.value = this.opts.value || this.opts.val;
     this.handleInput = (e) => {
@@ -293,9 +296,9 @@
     }
 
     if (this.opts.html)
-      this.root.innerHTML = typeof this.opts.html === 'function' ?
-      this.opts.html() :
-      this.opts.html;
+      this.root.innerHTML = typeof this.opts.html === 'function' 
+        ? this.opts.html()
+        : this.opts.html;
 
     return;
 

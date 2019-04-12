@@ -19,7 +19,7 @@ function defaultStore(initState){
     
     this.url      = data.ENV && data.ENV.URL;
     this.version  = data.ENV && data.ENV.VER;
-      
+
     //this['STORE_ROUTE_ATTR'] = data => this.set(data, true);
     this['STORE_ROUTE'] = data => {
       const { query: { splash }, hash, route, back } = data;
