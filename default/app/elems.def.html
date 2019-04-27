@@ -69,7 +69,16 @@
     <span if={opts.eg} class="fw:600 fs:80pc c:txta5"><small class="c:txta2">e.g.</small> {opts.eg}</span>
   </div>
   
-  
+  <style>
+  input[type="number"]::-webkit-outer-spin-button, 
+  input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+  }
+  input[type="number"] {
+      -moz-appearance: textfield;
+  }
+  </style>
   
   <script>
     this.value = this.opts.value || this.opts.val;
@@ -84,6 +93,19 @@
     }
   </script>
 </def-input>
+
+<def-select>
+  <select each={item in opts.items} change={ handleClick }>
+    <option value={item.value}>{item.text}</option>
+  </select>
+  <script>
+    this.handleClick = e => {
+      e.preventDefault();  
+      this.opts.change && this.opts.change(e) || this.opts.handleClick(e);
+    }
+    
+  </script>
+</def-select>
 
 <def-check>
   <div onclick={handleClick} class="crs:pt fs:80pc fw:400 c:txt200 dp:flx md-ai:c jc:c ta:l m:20px c:prim_fw:600_a">
