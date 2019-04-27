@@ -147,7 +147,7 @@
     <div onclick={toggle} class="{
       'mdx-dp:n': !show, 
       'p-b:5px': true, 
-      'bd-t-w:1px bd-c:grey200': !opts.transparent
+      'mdx-bd-t-w:1px bd-c:grey200': !opts.transparent
     }">
       <def-button each={route in routes} if={route.show(opts.user)} text={route.name} empty={!route.important} bordered={route.important} sec={route.important} class="m:10px md-dp:ib dp:bk" route={route} />
     </div>
