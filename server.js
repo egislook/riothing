@@ -376,10 +376,8 @@ utils.getScript = (
           req.cookies = Cookies;
           req.hash = riothing.utils.qs(window.location.hash.replace('#', ''));
           req.query = riothing.utils.qs(req.querystring);
-          if(window.ga){
-            window.ga('set', 'page', window.location.href);
-            window.ga('send', 'pageview');
-          }
+          window.ga && window.ga('set', 'page', window.location.href);
+          window.ga && window.ga('send', 'pageview');
           next();
         });
         
