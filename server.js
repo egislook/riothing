@@ -146,7 +146,6 @@ module.exports.route = (req, res) => {
   const query = req.query;
   //const cookies = cookie.parse(req.headers.cookie);
   //riothing.act('SET_ROUTE', { page, query, extras: req.originalUrl.split('/') /*cookies*/ });
-
   res.send(utils.renderHTML(CLIENT));
 }
 
@@ -396,6 +395,9 @@ utils.getScript = (
 
 utils.renderHTML = (state, tagName = 'html') => {
   const opts = Object.assign({ state }, CLIENT, CFG);
+  
+  if(opts.DATA && state.meta)
+    opts.DATA = Object.assign(opts.DATA, { meta: state.meta });
   
   let html =  (`
     <!DOCTYPE html>
