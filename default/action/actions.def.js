@@ -31,10 +31,10 @@ function defaultActions(){
     DEF_FETCHER: function(fetcher){
       // console.log('DEF_FETHCER', this.utils);
       
-      const gql = this.utils.gql;
+      const gql = this.utils.gql.post;
       
       const promises = fetcher.map(link => 
-        !link.GQ 
+        !link.query 
           ? fetch(link.url)
               .then( res => res.json() )
               .then( data => Object.assign(link, { data: link.limit ? data.slice(0, link.limit) : data }) )

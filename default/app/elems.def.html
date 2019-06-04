@@ -59,7 +59,13 @@
         'p-rl:15px': !opts.option,
         'ta:r': !opts.labeled,
         'ta:l': opts.labeled
-      }" riot-value={opts.value || opts.val} placeholder={opts.placeholder} type={opts.type} oninput={handleInput} />
+      }" 
+      riot-value={opts.value || opts.val} 
+      placeholder={opts.placeholder} 
+      name={opts.name} 
+      type={opts.type} 
+      onblur={handleBlur} 
+      oninput={handleInput} />
 
     <a if={opts.option} onclick={opts.handleclickoptions} class="fs:100pc fw:600 p:8px-15px mnw:80px ta:c bd-l:1px-sld-greya3 br:0-5px-5px-0 lh:1">
       <yield />{typeof opts.option === 'string' && opts.option}
@@ -82,9 +88,15 @@
   
   <script>
     this.value = this.opts.value || this.opts.val;
+    
     this.handleInput = (e) => {
       this.value = e.target.value.length && e.target.value || undefined;
-      this.opts.handleinput && this.opts.handleinput(this.value);
+      this.opts.handleinput && this.opts.handleinput(this.value, this.opts);
+    }
+    
+    this.handleBlur = (e) => {
+      this.value = e.target.value.length && e.target.value || undefined;
+      this.opts.handleblur && this.opts.handleblur(this.value, this.opts);
     }
 
     this.shouldUpdate = (data, nextOpts) => {

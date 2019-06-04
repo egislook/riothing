@@ -338,81 +338,174 @@ function Riothing(cfg){
           fucss.glob = false;
           return fucss.generateStyling({ riot: html, returnStyle: false })
         })
-        
-    this.gql = ({ query, GQ = ENV.GQ, token, variables, endpoint = 'https://api.graph.cool/simple/v1/' }) => {
-      //GQ = ENV.GQ || GQ;
-      return fetch(endpoint + GQ, {
+    
+    let webSockets = {};
+    let webSocketSubscriptions = {};
+    
+    this.post = ({ url, token, headers = {}, body }) => {
+      
+      const opts = {
         method: 'POST',
         headers: { 
-          'content-type':   'application/json',
-          'authorization':  `Bearer ${token}`
+          'content-type': 'application/json',
+          ...(token && {'authorization':  `Bearer ${token}`} || {}),
+          ...headers
         },
-        body: JSON.stringify({ query, variables })
-      })
-      .then( res => res.json() )
-      .then( json => {
-        if(json.errors){
-          const error = json.errors.shift();
-            
-          throw error.functionError || error.message || error;
-        }
-        return json.data 
-      })
-      .then( data => {
-        const keys = Object.keys(data);
-        return keys.length && data[keys.shift()];
-      })
-      .catch( error => {
-        console.warn(error);
-        return { error };
-      })
-    }
-    
-    this.gqlWs = ({ GQ, token, queries = [], action }) => {
-      GQ = ENV.GQ || GQ;
-      
-      const webSocket = new WebSocket('wss://subscriptions.ap-northeast-1.graph.cool/v1/' + GQ, 'graphql-subscriptions');
-      
-      webSocket.onopen = e => {
-        webSocket.send(JSON.stringify({
-          type: 'init',
-          payload: {
-            Authorization: `Bearer ${token}`
-          }
-        }))
+        body: JSON.stringify(body)
       }
       
-      webSocket.onmessage = e => {
-        const data = JSON.parse(e.data);
-        switch(data.type){
-
-          case 'init_success':
-            this.log('socket connected');
-            queries.forEach( (query, id) => webSocket.send(JSON.stringify({
-              id,
-              type: 'subscription_start',
-              query
-            })))
-          break;
-          
-          case 'subscription_data':
-            const payload = data.payload.data;
-            const keys = Object.keys(payload);
-            action && action(keys.length && payload[keys.shift()])
-          break;
-          
-          case 'init_fail': {
-            throw {
-              message: 'init_fail returned from WebSocket server',
-              data
+      return fetch(url, opts)
+        .then( res => res.json() )
+    };
+      
+    this.gql = {
+      
+      post: ({ query, GQ, token, headers = {}, variables, endpoint }) => {
+      
+        GQ = !endpoint ? GQ || ENV.GQ : '';
+        endpoint = endpoint || 'https://api.graph.cool/simple/v1/';
+        
+        const opts = {
+          method: 'POST',
+          headers: { 
+            'content-type': 'application/json',
+            ...(token && {'authorization':  `Bearer ${token}`} || {}),
+            ...headers
+          },
+          body: JSON.stringify({ query, variables })
+        }
+        
+        return fetch(endpoint + GQ, opts)
+          .then( res => res.json() )
+          .then( json => {
+            if(json.errors){
+              const error = json.errors.shift();
+                
+              throw error.functionError || error.message || error;
+            }
+            return json.data 
+          })
+          .then( data => {
+            const keys = Object.keys(data);
+            return keys.length && data[keys.shift()];
+          })
+          .catch( error => {
+            console.warn(error);
+            return { error };
+          })
+      },
+      
+      open: ({ token, url, protocolOld, debug }, cb) => {
+      
+        if(webSockets[url]){
+          console.log(`WebSocket ${url} is already open`);
+          return Promise.resolve(webSockets[url]);
+        }
+        
+        webSockets[url] = new WebSocket(url, protocolOld ? 'graphql-subscriptions' : 'graphql-ws');
+        webSocketSubscriptions[url] = {};
+        
+        webSockets[url].onopen = e => {
+          // send handshake
+          webSockets[url].send(JSON.stringify({
+            type: protocolOld ? 'init' : 'connection_init',
+            payload: {
+              Authorization: `Bearer ${token}`,
+              headers: {
+                'content-type': 'application/json',
+                authorization: `Bearer ${token}`
+              }
+            }
+          }))
+        }
+        
+        // webSocket.onclose = () => {
+        //   isSocketConnected = false;
+        //   webSocket.close() // disable onclose handler first
+        // }
+        return new Promise( (resolve, reject) => {
+        
+          webSockets[url].onmessage = e => {
+            const data = JSON.parse(e.data);
+            
+            debug && console.log(data.type);
+            
+            switch(data.type){
+              
+              case 'init_success':
+              case 'connection_ack':
+                debug && console.log('Fetchier wsGQL:', url, 'socket connected');
+                // queries && wsGQLSubscribe({ url, queries });
+                return resolve(webSockets[url]);
+                // return cb && cb(webSockets[url]);
+              break;
+              
+              case 'subscription_data':
+              case 'data':
+                const payload = data.payload.data;
+                debug && console.log('Fetchier wsGQL:', { payload }, data);
+                const keys = Object.keys(payload);
+                
+                const action = webSocketSubscriptions[url][data.id];
+                action && action(keys.length && payload[keys.shift()])
+              break;
+              
+              case 'init_fail':
+              case 'connection_error': return reject(data.payload);
             }
           }
           
+        });
+      },
+      
+      subscribe: ({ url, subscription, debug }) => {
+  
+        return subscribe(subscription);
+        
+        function subscribe({id, query, action, variables}){
+          if(!webSocketSubscriptions[url])
+            return console.warn('Fetchier wsGQLSubscribe', `"${id}"`, 'can not subscribe without existing socket', url);
+          if(webSocketSubscriptions[url][id]) 
+            return console.warn('Fetchier wsGQLSubscribe', `"${id}"`, 'subscription already exists');
+          
+          webSocketSubscriptions[url][id] = action;
+          const payload = { id: String(id), type: 'start', payload: { query, variables } };
+          if(!webSockets[url]) return;
+          webSockets[url].send(JSON.stringify(payload));
+          return debug && console.log('Fetchier wsGQLSubscribe start', id, url, payload);
         }
+        
+        return;
+      },
+      
+      unsubscribe: ({ url, id, debug }) => {
+        if(!webSocketSubscriptions[url] || webSocketSubscriptions[url] && !webSocketSubscriptions[url][id])
+          return;
+        delete webSocketSubscriptions[url][id];
+        webSockets[url].send(JSON.stringify({ type: 'stop', id: String(id) }));
+        return debug && console.log('Fetchier wsGQLUnsubscribe stop', id, url);
+      },
+      
+      close: (props = {}) => {
+        if(props.url && webSockets[props.url]){
+          webSockets[props.url].close();
+          delete webSockets[props.url];
+          delete webSocketSubscriptions[props.url];
+          return;
+        }
+        
+        for( let url in webSockets ){
+          webSockets[url].close();
+          delete webSockets[url];
+          delete webSocketSubscriptions[url];
+        }
+        
+        return;
       }
       
-      return webSocket;
     }
+
+    
     
     this.cloneObject = (obj, noneDeep) => {
       let output = JSON.parse(JSON.stringify(obj));
