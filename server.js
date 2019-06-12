@@ -151,7 +151,7 @@ module.exports.route = (req, res) => {
 
 module.exports.render = (req, res) => { res.send(utils.renderHTML(CLIENT)) }
 
-module.exports.server = (cfg) => {
+function server(cfg) {
   cfg = cfg || {};
   
   let ENV = {
@@ -186,15 +186,30 @@ module.exports.server = (cfg) => {
     app.listen(CFG.PORT, () => utils.message('started dev on ' + ENV.URL));
   }
 
-  Setup(CFG, { app } )
+  return Setup(CFG, { app } )
     .then(riothing => {
       ENV.READY = true;
       
-      if(ENV.DEV) return;
-      app.listen(CFG.PORT, () => utils.message('started production ' + ENV.URL));
-      //riothing.act(CFG.EXTERNAL_ACTION_NAME);
+      if(ENV.DEV) 
+        return riothing;
+      
+      const getServer = () => app.listen(CFG.PORT, () => {
+        utils.message('started production ' + ENV.URL)
+      });
+      
+      const reload = parseInt(CFG.reload || 1);
+      
+      let serv = getServer();
+      utils.message('Reloading Server in ' + reload + ' Minutes');
+      setInterval(() => {
+        utils.message('Reloading Server in ' + reload + ' Minutes');
+        serv.close(() => { serv = getServer() });
+      }, reload * 60000);
+      return riothing;
     });
 }
+
+module.exports.server = server;
 
 //UTILS
 let utils = {};
