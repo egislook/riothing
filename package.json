@@ -1,6 +1,6 @@
 {
   "name": "riothing",
-  "version": "0.2.20",
+  "version": "0.2.21",
   "description": "riot & node tag compiling, rendering and routing functions",
   "main": "server.js",
   "scripts": {
