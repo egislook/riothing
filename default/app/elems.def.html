@@ -87,9 +87,15 @@
   </style>
   
   <script>
+    this.timer;
     this.value = this.opts.value || this.opts.val;
     
     this.handleInput = (e) => {
+      clearTimeout(this.timer);
+      if(this.opts.blurAuto){
+        this.timer = setTimeout(() => this.handleBlur(e), this.opts.blurAuto);
+      }
+      
       if(!this.opts.handleinput)
         return;
         
