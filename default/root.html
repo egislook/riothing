@@ -1,6 +1,7 @@
 <html lang="en">
 	<head>
 	  <meta charset="utf-8" />
+	  <meta name="theme-color" content="{ meta.themecolor || '#26292D' }" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
 		<meta if={false} http-equiv="Content-Security-Policy" content="default-src 'self'; font-src 'self' data: fonts.gstatic.com;" />
 		<!-- for Google -->
@@ -23,6 +24,7 @@
 		<link rel="icon" type="image/x-icon" href={ meta.favicon } />
 		<!-- stylesheets -->
 		<link if={STYLES} each={style in STYLES} href={style} rel="stylesheet" />
+		<link if={pwa} rel="manifest" href="/manifest.json" />
 		<link if={fonts} each={font in fonts} font-src={font} href={font} rel="stylesheet" />
 		<link if={SERV_STYLE} rel="stylesheet" href="/style.css" />
 		<!-- prefetch -->
@@ -51,11 +53,12 @@
 		
 			init(this.opts);
 			
-			function init({ DATA: { classBody, meta, fonts, prefetch }, SERV_STYLE, ACTIONS, STORES, VIEWS, SCRIPT }){
+			function init({ DATA: { classBody, meta, fonts, prefetch, libs = [], styles = [] }, SERV_STYLE, ACTIONS, STORES, VIEWS, SCRIPT, pwa }){
 				// Configurable
 				this.classBody	= classBody;
 				this.meta				= meta;
 				this.fonts			= fonts;
+				this.pwa				= pwa;
 				this.prefetch		= prefetch || [
 			  	//'/content.json',
 			  ];
@@ -66,6 +69,7 @@
 					'https://cdnjs.cloudflare.com/ajax/libs/page.js/1.8.3/page.min.js',
 					'https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js',
 					'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
+					...libs
 					// 'https://cdn.jsdelivr.net/npm/r-localize/dist/r-localize.js'
 					// 'https://cdn.jsdelivr.net/riotgear/latest/rg.min.js',
 					// 'https://cdnjs.cloudflare.com/ajax/libs/commonmark/0.29.0/commonmark.js'
@@ -75,7 +79,8 @@
 			    //'https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.2/lodash.min.js',
 			  ];
 			  this.STYLES = [
-			  	'https://cdn.rawgit.com/noneedsystem/fuico/0.0.8/style.css'
+			  	'https://cdn.rawgit.com/noneedsystem/fuico/0.0.8/style.css',
+			  	...styles
 			  ];
 			  
 			  this.SERV_STYLE = SERV_STYLE;

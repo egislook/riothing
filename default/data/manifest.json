@@ -1,0 +1,15 @@
+{
+  "short_name": "Riothing",
+  "name": "Riothing",
+  "icons": [
+    {
+      "src": "/def/favicon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "background_color": "#26292D",
+  "theme_color": "#26292D",
+  "display": "standalone",
+  "start_url": "/"
+}

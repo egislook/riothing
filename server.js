@@ -11,7 +11,7 @@ const fetch     = global.fetch = require('node-fetch');
 const cookie    = require('cookie');
 
 const marked    = global.marked = require('marked');
-const fucss     = global.fucss  = DEV ? require('../fucss/fucss.js') : require('fucss'); 
+const fucss     = global.fucss  = require('fucss'); //DEV ? require('../fucss/fucss.js') : 
 
 const CLIENT = {
   VIEWS:    [],
@@ -163,8 +163,15 @@ function server(cfg) {
     CFG: cfg,
   };
   
+  // Gets manifest
+  const manifestDefaultPath = CFG.DEF_DIR + '/data/manifest.json';
+  const manifestClientPath = CFG.PUB_DIR + '/data/manifest.json';
+  const manifest = fs.readFileSync(fs.existsSync(manifestClientPath) ? manifestClientPath : manifestDefaultPath).toString();
+  
   // Configuring the app
   utils.configure(cfg, ENV);
+  
+  // console.log({ cfg });
   
   // Serving static files
   app.use('/', express.static(CFG.PUB_DIR));
@@ -176,6 +183,9 @@ function server(cfg) {
     STYLE = STYLE || utils.compileStyle(CFG.PUB_DIR, CFG.STYLE_FILE);
     res.send(STYLE); 
   });
+  
+  CFG.pwa && app.get('/manifest.json', (req, res) => { res.setHeader('content-type', 'application/json'); res.send(manifest) });
+  CFG.pwa && app.get('/sw.js', (req, res) => { res.setHeader('content-type', 'application/javascript'); res.send(`self.addEventListener('fetch', (event) => {});`) });
   
   if(ENV.DEV){
     app.get('/env', (req, res) => { res.json(ENV) });
@@ -362,7 +372,7 @@ utils.toBase64 = (str) =>
 utils.message = msg => console.warn('[RIOTHING]', msg);
 
 utils.getScript = (
-  { INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV, INIT_DEF_ACTION_NAME, DEF_STORE_NAME, DEF_ROUTE_ACTION_NAME }, 
+  { INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV, INIT_DEF_ACTION_NAME, DEF_STORE_NAME, DEF_ROUTE_ACTION_NAME, pwa }, 
   { actions, stores, defaults }
 ) => {
   let client = [];
@@ -373,6 +383,14 @@ utils.getScript = (
   
   // includes default app actions, stores and views from default folder
   defaults && client.push(defaults.join(';\n'));
+  pwa && client.push(`
+    if('serviceWorker' in window.navigator){
+      window.navigator.serviceWorker.register('/sw.js').then( 
+        ({ scope }) => console.log('[RT] ServiceWorker registered ', scope),
+        (err) =>  console.wran('[RT]ServiceWorker failed: ', err)
+      )
+    }
+  `);
   
   client.push(`
     var riothing = new Riothing({
