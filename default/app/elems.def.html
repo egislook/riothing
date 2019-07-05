@@ -1,5 +1,8 @@
 <def-button>
-  <a href={ opts.route ? act( 'LINK', opts.route) : opts.href } onclick={handleClick} class="{
+  <a href={ opts.route && !opts.route.link ? act( 'LINK', opts.route) : opts.route && opts.route.link || opts.href }
+    target={opts.route && opts.route.target || ''}
+    onclick={handleClick} 
+    class="{
       'bd-w:1px bs:3 ts:all fw:600 ws:np': true,
       'w:100pc': opts.full,
       'bg:ts': opts.bordered && !opts.white,
@@ -190,7 +193,15 @@
       'p-b:5px': true, 
       'mdx-bd-t-w:1px bd-c:grey200': !opts.transparent
     }">
-      <def-button each={route in routes} if={route.show(opts.user)} text={route.name} empty={!route.important} bordered={route.important} sec={route.important} class="m:10px md-dp:ib dp:bk" route={route} />
+      <def-button 
+        each={route in routes} 
+        if={route.show(opts.user)} 
+        text={route.name} 
+        empty={!route.important} 
+        bordered={route.important} 
+        sec={route.important} 
+        class="m:10px md-dp:ib dp:bk" 
+        route={route} />
     </div>
   </nav>
   <script>

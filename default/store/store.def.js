@@ -45,7 +45,7 @@ function defaultStore(initState){
     }
   }
   
-  function Route({ name, view, route, actions, splash, plain, md, important, auth, authHide, popup }){
+  function Route({ name, view, route, actions, splash, plain, md, important, auth, authHide, popup, link, target }){
     this.name       = name || view && view.split('-')[1] || md || route && route.split('/')[1];
     this.route      = route;
     this.link       = route || splash && '?splash=' + this.name || popup && '#popup=' + this.name;
@@ -59,5 +59,7 @@ function defaultStore(initState){
     this.view       = view || (!md && 'page-' + (this.name || 'main'));
     this.show       = user => (!auth && !authHide) || (auth && user) || (authHide && !user);
     this.main       = !splash && (route && route === '/' || view === 'page-main');
+    this.link       = link;
+    this.target     = target;
   }
 }
