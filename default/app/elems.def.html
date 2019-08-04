@@ -1,9 +1,11 @@
 <def-button>
   <a href={ opts.route && !opts.route.link ? act( 'LINK', opts.route) : opts.route && opts.route.link || opts.href }
     target={opts.route && opts.route.target || ''}
-    onclick={handleClick} 
+    onclick={handleClick}
     class="{
-      'bd-w:1px bs:3 ts:all fw:600 ws:np': true,
+      'bd-w:1px bs:3 ts:all ws:np': true,
+      'fw:600': !opts.thin,
+      'fw:400': opts.thin,
       'w:100pc': opts.full,
       'bg:ts': opts.bordered && !opts.white,
       'bg:white bd-c:sec c:sec': opts.white,
@@ -27,7 +29,7 @@
       e.stopPropagation();
       if(this.opts.disabled);
         return;
-        
+
       this.opts.onClick && this.opts.onClick(e) || this.opts.handeClick(e);
     }
   </script>
@@ -40,9 +42,9 @@
     </label>
     <span class="fw:600 fs:80pc c:txta3 mdx-dp:n p-tb:5px p-r:10px" if={opts.eg}><small class="c:txta2">e.g.</small> {opts.eg}</span>
   </div>
-  <div class="{ 
-    'dp:flx br:5px ai:c': true, 
-    'bg:whitea9 c:txt': !opts.dark && !opts.prim && !opts.bordered, 
+  <div class="{
+    'dp:flx br:5px ai:c': true,
+    'bg:whitea9 c:txt': !opts.dark && !opts.prim && !opts.bordered,
     'bg:blacka8 c:white': opts.dark && !opts.prim && !opts.bordered,
     'bg:prim c:white': !opts.dark && opts.prim && !opts.bordered,
     'w:100pc': opts.full,
@@ -61,12 +63,12 @@
         'p-rl:15px': !opts.option,
         'ta:r': !opts.labeled,
         'ta:l': opts.labeled
-      }" 
-      riot-value={opts.value || opts.val} 
-      placeholder={opts.placeholder} 
-      name={opts.name} 
-      type={opts.type} 
-      onblur={handleBlur} 
+      }"
+      riot-value={opts.value || opts.val}
+      placeholder={opts.placeholder}
+      name={opts.name}
+      type={opts.type}
+      onblur={handleBlur}
       oninput={handleInput}
       ref="input" />
 
@@ -77,9 +79,9 @@
   <div class="md-dp:n ta:l p-l:10px p-tb:5px">
     <span if={opts.eg} class="fw:600 fs:80pc c:txta5"><small class="c:txta2">e.g.</small> {opts.eg}</span>
   </div>
-  
+
   <style>
-    input[type="number"]::-webkit-outer-spin-button, 
+    input[type="number"]::-webkit-outer-spin-button,
     input[type="number"]::-webkit-inner-spin-button {
       -webkit-appearance: none;
       margin: 0;
@@ -88,36 +90,36 @@
       -moz-appearance: textfield;
     }
   </style>
-  
+
   <script>
     this.timer;
     this.value = this.opts.value || this.opts.val;
-    
+
     this.handleInput = (e) => {
       clearTimeout(this.timer);
       if(this.opts.blurAuto){
         this.timer = setTimeout(() => this.handleBlur(e), this.opts.blurAuto);
       }
-      
+
       if(!this.opts.handleinput)
         return;
-        
+
       this.value = e.target.value.length && e.target.value || undefined;
       this.opts.handleinput && this.opts.handleinput(this.value, this.opts);
     }
-    
+
     this.handleBlur = (e) => {
       if(e.target.value == this.value)
         return console.warn('Same Input Value');
-        
+
       if(!e.target.value.length){
         if(this.value)
           this.refs.input.value = this.value
         return console.warn('Empty Input Value');
       }
-        
+
       this.value = e.target.value.length && e.target.value || undefined;
-        
+
       this.opts.handleblur && this.opts.handleblur(this.value, this.opts);
     }
 
@@ -128,7 +130,7 @@
       }
       return true;
     }
-    
+
   </script>
 </def-input>
 
@@ -138,10 +140,10 @@
   </select>
   <script>
     this.handleClick = e => {
-      e.preventDefault();  
+      e.preventDefault();
       this.opts.change && this.opts.change(e) || this.opts.handleClick(e);
     }
-    
+
   </script>
 </def-select>
 
@@ -151,10 +153,10 @@
     'jc:c m:20px': !opts.left,
     'jc:fs m:10px': opts.left
   }>
-    <span class={{ 
-      'ts:all h,w,lh,mnw:25px br:25pc ta:c m-r:10px fu-check bd-w:1px': true, 
-      'bg:sec c:white bs:1': opts.checked, 
-      'bg:white c:greya5': !opts.checked 
+    <span class={{
+      'ts:all h,w,lh,mnw:25px br:25pc ta:c m-r:10px fu-check bd-w:1px': true,
+      'bg:sec c:white bs:1': opts.checked,
+      'bg:white c:greya5': !opts.checked
     }} />
     <def-md md={opts.md || opts.markdown || opts.label} />
   </div>
@@ -177,34 +179,38 @@
 </def-check>
 
 <def-nav>
-  <nav class="z:3 t,l:0 w:100pc md-dp:flx jc:sb ai:c p:0-5pc ts:bg {
+  <div class="z:3 t,l:0 w:100pc ts:bg {
     'ps:fx': opts.fixed,
     'ps:ab': !opts.fixed,
     'bg:white bd-b:1px-sld-greya2 c:txt': !opts.transparent,
     'mdx-bg:blacka9': opts.transparent && show
-  } {opts.classname}">
-    <a href="/" class="dp:flx ai:c jc:fs mdx-m:0-auto">
-      <img class="w:24px m-r:5px {'p:3px br:50pc w:30px-!': opts.transparent}" src={logo} />
-      <h2 class="fw:300 p-tb:20px">{name}</h2>
-    </a>
-    <i onclick={toggle} class="md-dp:n ps:ab r,t:0 fs:130pc p:22px ac-bg:sec_c:white ts:all z:5 { 'fu-menu': !show , 'fu-cross': show}" ></i>
-    <div onclick={toggle} class="{
-      'mdx-dp:n': !show, 
-      'p-b:5px': true, 
-      'mdx-bd-t-w:1px bd-c:grey200': !opts.transparent
-    }">
-      <def-button 
-        each={route in routes} 
-        if={route.show(opts.user)} 
-        text={route.name} 
-        empty={!route.important} 
-        bordered={route.important} 
-        sec={route.important} 
-        class="m:10px md-dp:ib dp:bk" 
-        route={route} />
-    </div>
-  </nav>
+  } {opts.classwrap}">
+    <nav class="w:100pc md-dp:flx jc:sb ai:c mxw:1100px p-rl:3pc {opts.classnav}">
+      <a href="/" class="dp:flx ai:c jc:fs mdx-m:0-auto">
+        <img if={onlyLogo} class="mxh:22px mdx-mxh:15px mdx-m-tb:23px {opts.classlogo}" src={onlyLogo} />
+        <img if={!onlyLogo} class="w:24px m-r:5px {'p:3px br:50pc w:30px-!': opts.transparent}" src={logo} />
+        <h2 if={!onlyLogo} class="fw:300 p-tb:20px">{name}</h2>
+      </a>
+      <i onclick={toggle} class="md-dp:n ps:ab r,t:0 fs:130pc p:22px ac-bg:sec_c:white ts:all z:5 { 'fu-menu': !show , 'fu-cross': show}" ></i>
+      <div onclick={toggle} class="{
+        'mdx-dp:n': !show,
+        'mdx-bd-t-w:1px bd-c:grey200': !opts.transparent
+      }">
+        <def-button
+          each={route in routes}
+          if={route.show(opts.user)}
+          text={route.name}
+          empty={!route.important}
+          bordered={route.important}
+          sec={route.important}
+          thin={true}
+          class="m:10px md-dp:ib dp:bk"
+          route={route} />
+      </div>
+    </nav>
+  </div>
   <script>
+    this.onlyLogo = this.opts.onlyLogo || this.opts.meta && this.opts.meta.onlyLogo;
     this.logo = this.opts.logo || this.opts.meta && this.opts.meta.favicon || '/def/favicon.png';
     this.name = this.opts.name || this.opts.meta && this.opts.meta.name || 'Riothing';
     this.routes = this.opts.routes || [
@@ -212,10 +218,10 @@
       { name: 'readme' },
       { name: 'contacts' }
     ];
-    
+
     this.toggle = () => this.update({ show: !this.show })
     this.show = false;
-    
+
     // this.on('update', () => {
     //   this.show = false;
     // });
@@ -242,13 +248,13 @@
       e.preventUpdate = true;
       e.preventDefault();
       e.stopPropagation();
-      
+
       if(this.opts.onclick)
         return this.opts.onclick(e);
-        
+
       if(this.opts.handleclick)
         return this.opts.handleclick(e);
-      
+
       if(this.opts.onclose)
         return this.opts.onclose(e);
     }
@@ -378,7 +384,7 @@
     }
 
     if (this.opts.html)
-      this.root.innerHTML = typeof this.opts.html === 'function' 
+      this.root.innerHTML = typeof this.opts.html === 'function'
         ? this.opts.html()
         : this.opts.html;
 
