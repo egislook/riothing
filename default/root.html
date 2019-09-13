@@ -14,14 +14,19 @@
 		<meta property="og:image" content={ meta.image } />
 		<meta property="og:url" content={ meta.url } />
 		<meta property="og:description" content={ meta.description } />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content={ meta.title }>
 		<!-- for Twitter -->
 		<meta name="twitter:card" content="summary" />
 		<meta name="twitter:title" content={ meta.title } />
 		<meta name="twitter:description" content={ meta.description } />
 		<meta name="twitter:image" content={ meta.image } />
+		<meta name="twitter:site" content={ meta.title } />
 		<!-- favicon -->
 		<link rel="shortcut icon" type="image/x-icon" href={ meta.favicon } />
 		<link rel="icon" type="image/x-icon" href={ meta.favicon } />
+		<!-- seo -->
+		<meta name="robots" content="index,follow" />
 		<!-- stylesheets -->
 		<link if={STYLES} each={style in STYLES} href={style} rel="stylesheet" />
 		<link if={pwa} rel="manifest" href="/manifest.json" />

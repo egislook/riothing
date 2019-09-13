@@ -1,6 +1,7 @@
 <def-button>
   <a href={ opts.route && !opts.route.link ? act( 'LINK', opts.route) : opts.route && opts.route.link || opts.href }
     target={opts.route && opts.route.target || ''}
+    title={opts.route && opts.route.title || opts.title || ''}
     onclick={handleClick}
     class="{
       'bd-w:1px bs:3 ts:all ws:np': true,
@@ -72,7 +73,7 @@
       oninput={handleInput}
       ref="input" />
 
-    <a if={opts.option} onclick={opts.handleclickoptions} class="fs:100pc fw:600 p:8px-15px mnw:80px ta:c bd-l:1px-sld-greya3 br:0-5px-5px-0 lh:1">
+    <a title={opts.option && opts.option.title || opts.option || ''} if={opts.option} onclick={opts.handleclickoptions} class="fs:100pc fw:600 p:8px-15px mnw:80px ta:c bd-l:1px-sld-greya3 br:0-5px-5px-0 lh:1">
       <yield />{typeof opts.option === 'string' && opts.option}
     </a>
   </div>
@@ -186,9 +187,9 @@
     'mdx-bg:blacka9': opts.transparent && show
   } {opts.classwrap}">
     <nav class="w:100pc md-dp:flx jc:sb ai:c mxw:1100px p-rl:3pc {opts.classnav}">
-      <a href="/" class="dp:flx ai:c jc:fs mdx-m:0-auto">
-        <img if={onlyLogo} class="mxh:22px mdx-mxh:15px mdx-m-tb:23px {opts.classlogo}" src={onlyLogo} />
-        <img if={!onlyLogo} class="w:24px m-r:5px {'p:3px br:50pc w:30px-!': opts.transparent}" src={logo} />
+      <a href="/" title={name} class="dp:flx ai:c jc:fs mdx-m:0-auto">
+        <img alt={name} if={onlyLogo} class="mxh:22px mdx-mxh:15px mdx-m-tb:23px {opts.classlogo}" src={onlyLogo} />
+        <img alt={name} if={!onlyLogo} class="w:24px m-r:5px {'p:3px br:50pc w:30px-!': opts.transparent}" src={logo} />
         <h2 if={!onlyLogo} class="fw:300 p-tb:20px">{name}</h2>
       </a>
       <i onclick={toggle} class="md-dp:n ps:ab r,t:0 fs:130pc p:22px ac-bg:sec_c:white ts:all z:5 { 'fu-menu': !show , 'fu-cross': show}" ></i>
@@ -290,8 +291,8 @@
 
 
 <def-link>
-  <a href={opts.href} onclick={opts.onclick} class={ 'c:black td:ul': true }>
-      {opts.text}
+  <a title={opts.title || ''} href={opts.href} onclick={opts.onclick} class={ 'c:black td:ul': true }>
+    {opts.text}
   </a>
 </def-link>
 
@@ -312,7 +313,7 @@
   } {opts.classname}">
 
     <div class="h:100pc" if={opts.splash}>
-      <a href="?" class="fs:140pc p:20px-30px md-t,r:0 md-ps:ab mdx-ps:fx mdx-b,r:0 {
+      <a href="?" title={opts.title || 'close'} class="fs:140pc p:20px-30px t,r:0 z:5 md-ps:ab mdx-ps:fx {
         'fu-arrow-right':  opts.right,
         'fu-arrow-up':     opts.down,
         'fu-arrow-down':   opts.up,
