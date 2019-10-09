@@ -198,6 +198,46 @@ function server(cfg) {
     getServer = () => app.listen(CFG.PORT, () => utils.message('started dev on ' + ENV.URL));
   }
 
+  return start()
+
+  function start(){
+    return Setup(CFG, { app } )
+      .then(riothing => {
+        ENV.READY = true;
+
+        getServer = getServer || (() => app.listen(CFG.PORT, () => {
+          utils.message('started production ' + ENV.URL)
+        }));
+
+        let serv = getServer();
+
+        if(!CFG.reload)
+          return riothing;
+
+        const reload = parseFloat(CFG.reload || 1);
+
+        utils.message('Reloading Server in ' + reload + ' Minutes');
+        setTimeout(() => {
+          // utils.message('Reloading Server in ' + reload + ' Minutes');
+          serv.close(() => {
+            // serv = getServer()
+            // CLIENT.VIEWS    = [];
+            CLIENT.STORES   =  [];
+            // CLIENT.ACTIONS  =  [];
+            // CLIENT.SCRIPT   =   '';
+            // CLIENT.DATA     = false;
+
+            // SERVER.ACTIONS = []
+            SERVER.STORES = [];
+            // SERVER.VIEWS = [];
+            start()
+          });
+        }, reload * 60000);
+        return riothing;
+      });
+  }
+
+
   return Setup(CFG, { app } )
     .then(riothing => {
       ENV.READY = true;
