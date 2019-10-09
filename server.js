@@ -11,7 +11,7 @@ const fetch     = global.fetch = require('node-fetch');
 const cookie    = require('cookie');
 
 const marked    = global.marked = require('marked');
-const fucss     = global.fucss  = require('fucss'); //DEV ? require('../fucss/fucss.js') : 
+const fucss     = global.fucss  = require('fucss'); //DEV ? require('../fucss/fucss.js') :
 
 const CLIENT = {
   VIEWS:    [],
@@ -74,7 +74,7 @@ let Riothing;
 function Setup(cfg){
   CFG       = utils.configure(cfg);
   Riothing  = utils.clientRequire(__dirname + CFG.CLIENT_FILE);
-  
+
   // collects all actions, stores and views including defaults
   return Promise.all([
     utils.compileWithDefaults(CFG.PUB_DIR, CFG.ACTION_DIR, CFG.DEF_DIR),
@@ -90,7 +90,7 @@ function Setup(cfg){
     SERVER.ACTIONS  = actions.slice().map(md => md.name);
     SERVER.STORES   = stores.slice().map(md => md.name);
     SERVER.VIEWS    = views.filter(md => md.type !== 'default').map(md => md.name);
-    
+
     return {
       defaults: [
         actions.filter(md => md.type === 'default').map(md => md.code).join(),
@@ -102,17 +102,17 @@ function Setup(cfg){
   .then(({ defaults }) => {
     // style compilation missing
     // compiles and converts client initial function to script string
-    CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, { 
-      actions:  SERVER.ACTIONS, 
-      stores:   SERVER.STORES, 
-      defaults 
+    CLIENT.SCRIPT = !CFG.CLIENTLESS && utils.getScript(CFG, {
+      actions:  SERVER.ACTIONS,
+      stores:   SERVER.STORES,
+      defaults
     });
-    
+
     // compiles root file
     utils.compileRoot(CFG.PUB_DIR, CFG.ROOT_FILE, CFG.DEF_DIR);
     return;
   })
-  .then( () => 
+  .then( () =>
     utils.compileAndMerge(CFG.PUB_DIR, CFG.DATA_DIR, CFG.DEF_DIR)
       .then( data => Object.assign(data, { ENV: CFG.ENV }) )
   )
@@ -126,16 +126,16 @@ function Setup(cfg){
     // Init client data
     CLIENT.DATA = data;
     // Init Riothing
-    const riothing = new Riothing({ 
-      actions:  SERVER.ACTIONS, 
-      stores:   SERVER.STORES, 
-      ENV:      CFG.ENV 
+    const riothing = new Riothing({
+      actions:  SERVER.ACTIONS,
+      stores:   SERVER.STORES,
+      ENV:      CFG.ENV
     });
-    
+
     return riothing.act(CFG.INIT_DEF_ACTION_NAME, data)
       .then( data => riothing.act(CFG.INIT_ACTION_NAME, data))
       .then( data => utils.router(data, riothing))
-      
+
   })
 }
 
@@ -153,7 +153,7 @@ module.exports.render = (req, res) => { res.send(utils.renderHTML(CLIENT)) }
 
 function server(cfg) {
   cfg = cfg || {};
-  
+
   let ENV = {
     DEV: cfg.env  || process.env.NODE_ENV === 'development',
     URL: cfg.url  || process.env.URL || `https://${CFG.IP}:${CFG.PORT}`,
@@ -162,31 +162,31 @@ function server(cfg) {
     FETCHER: cfg.fetcher,
     CFG: cfg,
   };
-  
+
   // Gets manifest
   const manifestDefaultPath = CFG.DEF_DIR + '/data/manifest.json';
   const manifestClientPath = CFG.PUB_DIR + '/data/manifest.json';
   const manifest = fs.readFileSync(fs.existsSync(manifestClientPath) ? manifestClientPath : manifestDefaultPath).toString();
-  
+
   // Configuring the app
   utils.configure(cfg, ENV);
-  
+
   // console.log({ cfg });
-  
+
   // Serving static files
   app.use('/', express.static(CFG.PUB_DIR));
   app.use('/def/', express.static(CFG.DEF_DIR + '/img'));
-  
+
   // Serving style
-  CFG.SERV_STYLE && app.get('/style.css', (req, res) => { 
+  CFG.SERV_STYLE && app.get('/style.css', (req, res) => {
     res.setHeader('content-type', 'text/css');
     STYLE = STYLE || utils.compileStyle(CFG.PUB_DIR, CFG.STYLE_FILE);
-    res.send(STYLE); 
+    res.send(STYLE);
   });
-  
+
   CFG.pwa && app.get('/manifest.json', (req, res) => { res.setHeader('content-type', 'application/json'); res.send(manifest) });
   CFG.pwa && app.get('/sw.js', (req, res) => { res.setHeader('content-type', 'application/javascript'); res.send(`self.addEventListener('fetch', (event) => {});`) });
-  
+
   if(ENV.DEV){
     app.get('/env', (req, res) => { res.json(ENV) });
     app.use((req, res, next) => {
@@ -199,16 +199,16 @@ function server(cfg) {
   return Setup(CFG, { app } )
     .then(riothing => {
       ENV.READY = true;
-      
-      if(ENV.DEV) 
+
+      if(!CFG.reload) 
         return riothing;
-      
+
       const getServer = () => app.listen(CFG.PORT, () => {
         utils.message('started production ' + ENV.URL)
       });
-      
+
       const reload = parseInt(CFG.reload || 1);
-      
+
       let serv = getServer();
       utils.message('Reloading Server in ' + reload + ' Minutes');
       setInterval(() => {
@@ -228,12 +228,12 @@ utils.readDir = (pub, f = '', files) => {
   files = files || [];
   if(!fs.existsSync(pub + f))
     return Promise.resolve(files);
-    
+
   fs.readdirSync(pub + f).forEach(file => {
     fs.lstatSync([pub, f, file].join('/')).isDirectory()
       ? utils.readDir(pub, [f, file].join('/'), files)
       : files.push([f, file].join('/'));
-      
+
   });
   //console.log(files);
   return Promise.resolve(files);
@@ -266,7 +266,7 @@ utils.compileRiot = (filePath, returnStr) => {
 
 utils.compileStyle = (pub, file, html) => {
   CLIENT.DATA.classBody && fucss.storeHTML(CLIENT.DATA.classBody);
-    
+
   const cssStr = fucss.generateStyling({
     riot: html || fucss.HTML.join(''),
     returnStyle: true,
@@ -288,9 +288,9 @@ utils.compileRoutes = (pub, file, def) => {
     utils.message('missing routes file ' + file + ' in ' + pub);
     return defaultRoutes;
   }
-  
+
   let routes = [].concat(require(pub + file), defaultRoutes);
-  
+
   return routes.reduce( (arr, item, i, all) => {
     (item.route || item.view || item.name) && !arr.find( el => item.route && el.route === item.route ) && arr.push(item);
     return arr;
@@ -302,7 +302,7 @@ utils.compileRoot = (pub, file, def) => {
     utils.message('loading default root ' + file);
     return utils.compileRiot(def + file)
   }
-  
+
   utils.compileRiot(pub + file)
 }
 
@@ -313,16 +313,16 @@ utils.compileAndMerge = (pub, dir, def, isPubFirst) => {
       if(obj['meta'] && item.name === 'config' && item.type === 'default')
         return obj;
       const value = obj[item.name];
-      
+
       if(value && value.constructor === Array){
         obj[item.name] = value.concat(item.data[item.name]);
-        
+
         if(item.name === 'routes'){
           obj[item.name] = obj[item.name].reduce( (arr, item) => {
             !arr.find( el => item.route && el.route === item.route ) && arr.push(item);
             return arr;
           }, []);
-          
+
           return obj;
         }
       }
@@ -331,36 +331,36 @@ utils.compileAndMerge = (pub, dir, def, isPubFirst) => {
 }
 
 utils.compileWithDefaults = (pub, dir, def, isViews, isPubFirst) => {
-  var links = [ 
-    { path: def, type: 'default' }, 
-    { path: pub } 
+  var links = [
+    { path: def, type: 'default' },
+    { path: pub }
   ].filter( ({ path, def }) => {
     if(fs.existsSync(path + dir))
       return true;
     utils.message('missing directory ' + dir + ' in ' + path);
   });
-  
+
   links = isPubFirst ? links.reverse() : links;
-  
+
   return Promise.all( links.map( link => utils.getFiles(link.path, dir, isViews, link.type) ) )
     .then( ([ defFiles, pubFiles ]) => defFiles.concat(pubFiles || []))
 }
 
 utils.getFiles = (pub, dir, views, type) => {
-  
+
   return utils.readDir(pub + dir)
     .then(files => Promise.all(files.map(file => {
-      
+
       if(type === 'markdown'){
         const text = fs.readFileSync(pub + dir + file, 'utf8');
         return new ExternalModule(dir, file, null, type, text)
       }
-      
+
       if(views){
         const md = utils.compileRiot(pub + dir + file, true);
         return new ExternalModule(dir, file, md.fn, type, false, md.name);
       }
-      
+
       return new ExternalModule(dir, file, utils.clientRequire(pub + dir + file), type);
     })))
     .then(extMods => extMods.filter(extMod => extMod.name))
@@ -368,30 +368,30 @@ utils.getFiles = (pub, dir, views, type) => {
 
 utils.toBase64 = (str) =>
   'data:text/javascript;base64,' + Buffer(str).toString('base64');
-  
+
 utils.message = msg => console.warn('[RIOTHING]', msg);
 
 utils.getScript = (
-  { INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV, INIT_DEF_ACTION_NAME, DEF_STORE_NAME, DEF_ROUTE_ACTION_NAME, pwa }, 
+  { INCLUDE_CLIENT, CLIENT_FILE, INIT_ACTION_NAME, TAG_NAME, ENV, INIT_DEF_ACTION_NAME, DEF_STORE_NAME, DEF_ROUTE_ACTION_NAME, pwa },
   { actions, stores, defaults }
 ) => {
   let client = [];
-  
-  // includes riothing client function 
+
+  // includes riothing client function
   INCLUDE_CLIENT && CLIENT_FILE &&
     client.push(fs.readFileSync(__dirname + CLIENT_FILE, 'utf8'));
-  
+
   // includes default app actions, stores and views from default folder
   defaults && client.push(defaults.join(';\n'));
   pwa && client.push(`
     if('serviceWorker' in window.navigator){
-      window.navigator.serviceWorker.register('/sw.js').then( 
+      window.navigator.serviceWorker.register('/sw.js').then(
         ({ scope }) => console.log('[RT] ServiceWorker registered ', scope),
         (err) =>  console.wran('[RT]ServiceWorker failed: ', err)
       )
     }
   `);
-  
+
   client.push(`
     var riothing = new Riothing({
       actions:  ${JSON.stringify(actions)},
@@ -403,7 +403,7 @@ utils.getScript = (
     riothing.act('${INIT_DEF_ACTION_NAME}', window.DATA)
       .then(data => riothing.act('${INIT_ACTION_NAME}', data))
       .then(content => {
-      
+
         page('*', (req, next) => {
           req.cookies = Cookies;
           req.hash = riothing.utils.qs(window.location.hash.replace('#', ''));
@@ -412,7 +412,7 @@ utils.getScript = (
           window.ga && window.ga('send', 'pageview');
           next();
         });
-        
+
         const routes = riothing.store('${DEF_STORE_NAME}').get('routes');
         routes.forEach( ({ route, method, actions }) => route && page(route, req => {
           riothing.action('${DEF_ROUTE_ACTION_NAME}')({ route, req })
@@ -428,15 +428,15 @@ utils.getScript = (
 
 utils.renderHTML = (state, tagName = 'html') => {
   const opts = Object.assign({ state }, CLIENT, CFG);
-  
+
   if(opts.DATA && state.meta)
     opts.DATA = Object.assign(opts.DATA, { meta: state.meta });
-  
+
   let html =  (`
     <!DOCTYPE html>
     ${riot.render(tagName, opts)}
   `);
-  
+
   // includes data
   if(opts.DATA)
     html = html.replace('</head>', `<script> window.DATA = ${JSON.stringify(opts.DATA)} </script></head>`)
@@ -459,19 +459,19 @@ utils.router = (data, riothing) => {
       3. convert to separate express routers instead of using * dircetly on app
           "this would give us ability to mount multiple riothing apps with different routes"
   **/
-  
+
   const extracted = riothing.extract();
   const routes    = riothing.store(CFG.DEF_STORE_NAME).get('routes');
-  
+
   routes.forEach( ({ route, method, actions }) =>
     route && app[method || 'get'](route || '/', [
       utils.cookies,
       //(req, res, next) => { riothing.restate(); return next() },
       (req, res, next) => {
-        req.riothing = new Riothing({ 
-          actions:  SERVER.ACTIONS, 
-          stores:   SERVER.STORES, 
-          ENV:      CFG.ENV 
+        req.riothing = new Riothing({
+          actions:  SERVER.ACTIONS,
+          stores:   SERVER.STORES,
+          ENV:      CFG.ENV
         });
         req.riothing.restate(extracted);
         next();
@@ -506,19 +506,19 @@ utils.autoRouteGenerator = (data, { PAGE_NAME_SEP }) => {
       md,
       splash: true,
     }));
-    
+
   data.routes && SERVER.VIEWS
     .filter( view => view.includes(PAGE_NAME_SEP) && !data.routes.find( route => ~['page-main', route.view].indexOf(view) ))
     .forEach( view => {
       const name = view.replace(PAGE_NAME_SEP, '');
-      data.routes.unshift({ 
-        route: '/' + name, 
+      data.routes.unshift({
+        route: '/' + name,
         view,
         name,
         //actions: ['APP_ROUTE'],
       });
     });
-  
+
   return data;
 }
 
@@ -528,20 +528,20 @@ function ExternalModule(dir, file, fn, type, text, name){
   this.code = typeof fn === 'function' ? fn.toString() : typeof fn === 'string' && fn;
   this.data = typeof fn === 'object' && fn;
   this.name = name || typeof fn === 'string' && fn || (fn && fn.name) || file.replace('/', '').replace('.json', '').replace('.md', '');
-  
-  if(this.fn) 
+
+  if(this.fn)
     global[this.name] = this.fn;
-  
-  if(type) 
+
+  if(type)
     this.type = type;
-    
+
   if(text)
     this.text = text;
-  
+
   //console.log(this.data.constructor, file)
   if(this.data && (this.data.constructor === Array || Object.keys(this.data).length > 4))
     this.data = { [this.name]: this.data };
-  
+
   return this;
 }
 
