@@ -187,25 +187,27 @@ function server(cfg) {
   CFG.pwa && app.get('/manifest.json', (req, res) => { res.setHeader('content-type', 'application/json'); res.send(manifest) });
   CFG.pwa && app.get('/sw.js', (req, res) => { res.setHeader('content-type', 'application/javascript'); res.send(`self.addEventListener('fetch', (event) => {});`) });
 
+  let getServer
+
   if(ENV.DEV){
     app.get('/env', (req, res) => { res.json(ENV) });
     app.use((req, res, next) => {
       ENV.READY ? ENV.SYNC = true : false;
       next();
     });
-    app.listen(CFG.PORT, () => utils.message('started dev on ' + ENV.URL));
+    getServer = () => app.listen(CFG.PORT, () => utils.message('started dev on ' + ENV.URL));
   }
 
   return Setup(CFG, { app } )
     .then(riothing => {
       ENV.READY = true;
 
-      if(!CFG.reload) 
+      if(!CFG.reload)
         return riothing;
 
-      const getServer = () => app.listen(CFG.PORT, () => {
+      getServer = getServer || (() => app.listen(CFG.PORT, () => {
         utils.message('started production ' + ENV.URL)
-      });
+      }));
 
       const reload = parseInt(CFG.reload || 1);
 
