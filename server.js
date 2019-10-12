@@ -12,6 +12,7 @@ const cookie    = require('cookie');
 
 const marked    = global.marked = require('marked');
 const fucss     = global.fucss  = require('fucss'); //DEV ? require('../fucss/fucss.js') :
+const shell     = require('shell-exec');
 
 const CLIENT = {
   VIEWS:    [],
@@ -186,6 +187,18 @@ function server(cfg) {
 
   CFG.pwa && app.get('/manifest.json', (req, res) => { res.setHeader('content-type', 'application/json'); res.send(manifest) });
   CFG.pwa && app.get('/sw.js', (req, res) => { res.setHeader('content-type', 'application/javascript'); res.send(`self.addEventListener('fetch', (event) => {});`) });
+
+  CFG.scripts && app.get('/scripts/:name', (req, res) => {
+    const name = String(req.params.name);
+    res.setHeader('content-type', 'application/json');
+
+    if(!process.env['npm_package_scripts_' + name] || !CFG.scripts.includes(name))
+      res.send({ statusCode: 500, message: 'Script does not exist or can not be triggered' })
+    else
+      shell('npm run ' + name)
+        .then(data => { console.log(data); res.send({ statusCode: 200, message: 'Successfully executed' }) })
+        .catch(error => { console.log(error); res.send({ statusCode: 500, message: 'Error' }) })
+  })
 
   let getServer
 
