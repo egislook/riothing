@@ -39,7 +39,7 @@
 <def-input>
   <div if={opts.labeled} class="dp:flx jc:sb ai:fe">
     <label if={opts.title && opts.labeled} for={opts.title} class="c:sec fw:600 p-tb:5px p-l:10px ta:l fs:75pc ws:np tr:uppercase">
-        {opts.title}
+      {opts.title}
     </label>
     <span class="fw:600 fs:80pc c:txta3 mdx-dp:n p-tb:5px p-r:10px" if={opts.eg}><small class="c:txta2">e.g.</small> {opts.eg}</span>
   </div>
@@ -73,9 +73,13 @@
       oninput={handleInput}
       ref="input" />
 
-    <a title={opts.option && opts.option.title || opts.option || ''} if={opts.option} onclick={opts.handleclickoptions} class="fs:100pc fw:600 p:8px-15px mnw:80px ta:c bd-l:1px-sld-greya3 br:0-5px-5px-0 lh:1">
-      <yield />{typeof opts.option === 'string' && opts.option}
-    </a>
+    <div
+      title={opts.option && opts.option.title || opts.option || ''}
+      if={opts.option}
+      onclick={opts.handleclickoptions}
+      class="{'fs:100pc fw:600 p:8px-15px mnw:80px ta:c bd-l:1px-sld-greya3 br:0-5px-5px-0 lh:1': true} {opts.labelclassname}">
+        <yield />{typeof opts.option === 'string' && opts.option}
+    </div>
   </div>
   <div class="md-dp:n ta:l p-l:10px p-tb:5px">
     <span if={opts.eg} class="fw:600 fs:80pc c:txta5"><small class="c:txta2">e.g.</small> {opts.eg}</span>
