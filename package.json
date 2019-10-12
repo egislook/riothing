@@ -7,7 +7,8 @@
     "test": "node test/index.js",
     "watch": "export NODE_ENV=development|| set NODE_ENV=development&& nodemon -e html,js,json --watch ../../ --watch ./ test2/index.js",
     "start": "node -e \"require('./riothing').render('../public').then(console.log)\"",
-    "min": "uglifyjs riothing.js > riothing.min.js"
+    "min": "uglifyjs riothing.js > riothing.min.js",
+    "deploy": "npm version patch && npm publish && git push origin master"
   },
   "keywords": [
     "html5",
