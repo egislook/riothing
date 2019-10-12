@@ -188,7 +188,7 @@ function server(cfg) {
   CFG.pwa && app.get('/manifest.json', (req, res) => { res.setHeader('content-type', 'application/json'); res.send(manifest) });
   CFG.pwa && app.get('/sw.js', (req, res) => { res.setHeader('content-type', 'application/javascript'); res.send(`self.addEventListener('fetch', (event) => {});`) });
 
-  CFG.scripts && app.get('/scripts/:name', (req, res) => {
+  CFG.scripts && app.post('/scripts/:name', (req, res) => {
     const name = String(req.params.name);
     res.setHeader('content-type', 'application/json');
 
